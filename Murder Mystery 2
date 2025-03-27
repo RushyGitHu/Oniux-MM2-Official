@@ -3,26 +3,192 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 -- Create GUI
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
+local UICorner = Instance.new("UICorner")
+local TopBar = Instance.new("Frame")
+local UICorner_2 = Instance.new("UICorner")
 local Title = Instance.new("TextLabel")
-local FlingFrame = Instance.new("Frame")
-local FlingInput = Instance.new("TextBox")
-local FlingButton = Instance.new("TextButton")
-local StopFlingButton = Instance.new("TextButton")
-local TeleportFrame = Instance.new("Frame")
-local TPGunButton = Instance.new("TextButton")
-local TPLobbyButton = Instance.new("TextButton")
-local TPMapButton = Instance.new("TextButton")
+local ContentFrame = Instance.new("Frame")
+local UIListLayout = Instance.new("UIListLayout")
+
+-- Create sections
+local FlingSection = Instance.new("Frame")
+local TeleportSection = Instance.new("Frame")
 
 -- GUI Setup
 ScreenGui.Parent = game.CoreGui
-MainFrame.Size = UDim2.new(0, 200, 0, 300)
+ScreenGui.ResetOnSpawn = false
+
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 250, 0, 350)
 MainFrame.Position = UDim2.new(0.8, 0, 0.3, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
+
+UICorner.Parent = MainFrame
+UICorner.CornerRadius = UDim.new(0, 10)
+
+TopBar.Name = "TopBar"
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+UICorner_2.Parent = TopBar
+UICorner_2.CornerRadius = UDim.new(0, 10)
+
+Title.Name = "Title"
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "MM2 Script"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
+Title.Parent = TopBar
+
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -20, 1, -50)
+ContentFrame.Position = UDim2.new(0, 10, 0, 45)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+UIListLayout.Parent = ContentFrame
+UIListLayout.Padding = UDim.new(0, 10)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Create styled button function
+local function createStyledButton(text, parent)
+    local button = Instance.new("TextButton")
+    local uiCorner = Instance.new("UICorner")
+    
+    button.Size = UDim2.new(1, 0, 0, 35)
+    button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.GothamSemibold
+    button.TextSize = 14
+    button.AutoButtonColor = false
+    button.Parent = parent
+    
+    uiCorner.CornerRadius = UDim.new(0, 6)
+    uiCorner.Parent = button
+    
+    -- Button hover effect
+    button.MouseEnter:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.2), {
+            BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        }):Play()
+    end)
+    
+    button.MouseLeave:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.2), {
+            BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        }):Play()
+    end)
+    
+    return button
+end
+
+-- Create sections
+local function createSection(title)
+    local section = Instance.new("Frame")
+    local sectionTitle = Instance.new("TextLabel")
+    local content = Instance.new("Frame")
+    local listLayout = Instance.new("UIListLayout")
+    
+    section.Size = UDim2.new(1, 0, 0, 100)
+    section.BackgroundTransparency = 1
+    section.Parent = ContentFrame
+    
+    sectionTitle.Size = UDim2.new(1, 0, 0, 25)
+    sectionTitle.BackgroundTransparency = 1
+    sectionTitle.Text = title
+    sectionTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sectionTitle.Font = Enum.Font.GothamBold
+    sectionTitle.TextSize = 14
+    sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
+    sectionTitle.Parent = section
+    
+    content.Size = UDim2.new(1, 0, 1, -25)
+    content.Position = UDim2.new(0, 0, 0, 25)
+    content.BackgroundTransparency = 1
+    content.Parent = section
+    
+    listLayout.Parent = content
+    listLayout.Padding = UDim.new(0, 5)
+    
+    return content
+end
+
+-- Create sections
+local flingContent = createSection("Fling")
+local teleportContent = createSection("Teleports")
+
+-- Create fling controls
+local FlingInput = Instance.new("TextBox")
+FlingInput.Size = UDim2.new(1, 0, 0, 35)
+FlingInput.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+FlingInput.PlaceholderText = "Enter username to fling"
+FlingInput.Text = ""
+FlingInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlingInput.PlaceholderColor3 = Color3.fromRGB(180, 180, 180)
+FlingInput.Font = Enum.Font.Gotham
+FlingInput.TextSize = 14
+FlingInput.Parent = flingContent
+
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 6)
+uiCorner.Parent = FlingInput
+
+local FlingButton = createStyledButton("Fling Player", flingContent)
+local StopFlingButton = createStyledButton("Stop Fling", flingContent)
+
+-- Create teleport buttons
+local TPGunButton = createStyledButton("TP to Gun", teleportContent)
+local TPLobbyButton = createStyledButton("TP to Lobby", teleportContent)
+local TPMapButton = createStyledButton("TP to Map", teleportContent)
+
+-- Make GUI draggable for both PC and mobile
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+TopBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateDrag(input)
+    end
+end)
 
 -- ESP Function
 local function createESP(player)
@@ -123,13 +289,6 @@ local function stopFling()
 end
 
 -- Setup GUI buttons and functionality
-FlingInput.PlaceholderText = "Enter username to fling"
-FlingButton.Text = "Fling Player"
-StopFlingButton.Text = "Stop Fling"
-TPGunButton.Text = "TP to Gun"
-TPLobbyButton.Text = "TP to Lobby"
-TPMapButton.Text = "TP to Map"
-
 FlingButton.MouseButton1Click:Connect(function()
     flingPlayer(FlingInput.Text)
 end)
