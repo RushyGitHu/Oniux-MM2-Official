@@ -308,11 +308,45 @@ local function flingPlayer(targetUsername)
         isFlinging = true
         originalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
         
-        while isFlinging do
-            LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
-            LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(500, 500, 500)
-            wait()
+        -- Set up for better flinging
+        local oldVelocity = LocalPlayer.Character.HumanoidRootPart.Velocity
+        local oldGyro = Instance.new("BodyGyro")
+        oldGyro.P = 0
+        oldGyro.MaxTorque = Vector3.new(0, 0, 0)
+        oldGyro.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+        oldGyro.Parent = LocalPlayer.Character.HumanoidRootPart
+        
+        -- Disable character animations
+        local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid:ChangeState(11)
         end
+        
+        while isFlinging and target.Character and target.Character:FindFirstChild("HumanoidRootPart") do
+            -- Update position and velocity more aggressively
+            LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 0.75)
+            LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(9999, 9999, 9999)
+            LocalPlayer.Character.HumanoidRootPart.RotVelocity = Vector3.new(9999, 9999, 9999)
+            game:GetService("RunService").Heartbeat:Wait()
+        end
+        
+        -- Clean up
+        if oldGyro then
+            oldGyro:Destroy()
+        end
+    else
+        -- Notify if player not found
+        local notification = Instance.new("TextLabel")
+        notification.Text = "Player not found!"
+        notification.Size = UDim2.new(1, 0, 0, 30)
+        notification.Position = UDim2.new(0, 0, 0, -35)
+        notification.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        notification.TextColor3 = Color3.fromRGB(255, 255, 255)
+        notification.Font = Enum.Font.GothamBold
+        notification.TextSize = 14
+        notification.Parent = MainFrame
+        
+        game:GetService("Debris"):AddItem(notification, 2)
     end
 end
 
@@ -320,8 +354,23 @@ end
 local function stopFling()
     isFlinging = false
     if originalPosition then
-        LocalPlayer.Character.HumanoidRootPart.CFrame = originalPosition
+        -- Smoothly return to original position
+        local tween = TweenService:Create(
+            LocalPlayer.Character.HumanoidRootPart,
+            TweenInfo.new(0.5, Enum.EasingStyle.Quad),
+            {CFrame = originalPosition}
+        )
+        tween:Play()
+        
+        -- Reset velocities
         LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+        LocalPlayer.Character.HumanoidRootPart.RotVelocity = Vector3.new(0, 0, 0)
+        
+        -- Reset character state
+        local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid:ChangeState(2)
+        end
     end
 end
 
