@@ -91,7 +91,24 @@ local throwablesList = {
     "rocketlauncher"
 }
 
--- Remove old lists and update createESP function
+-- Add these lists after the existing lists
+local grandmaList = {
+    "grandma",
+    "granny"
+}
+
+-- Add this function to check if an item is Grandma
+local function isGrandma(item)
+    local itemNameLower = item.Name:lower()
+    for _, name in pairs(grandmaList) do
+        if itemNameLower:find(name) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Update createESP function to include players and Grandma
 local function createESP(item)
     -- Check if ESP already exists for this item
     for _, esp in pairs(espItems) do
@@ -109,8 +126,18 @@ local function createESP(item)
     local itemType = "other"
     local color
     
+    -- Check if it's Grandma (Bright Red)
+    if isGrandma(item) then
+        color = Color3.fromRGB(255, 0, 0) -- Bright Red
+        itemType = "⚠️ GRANDMA ⚠️"
+        highlight.FillTransparency = 0.3 -- More visible
+    -- Check if it's a player (Blue)
+    elseif item:IsA("Model") and item:FindFirstChild("Humanoid") and Players:GetPlayerFromCharacter(item) and Players:GetPlayerFromCharacter(item) ~= LocalPlayer then
+        color = Color3.fromRGB(0, 150, 255) -- Light Blue
+        itemType = "Player"
+        highlight.FillTransparency = 0.5
     -- Check keys (Yellow)
-    if itemNameLower:find("key") then
+    elseif itemNameLower:find("key") then
         color = Color3.fromRGB(255, 255, 0) -- Bright Yellow
         itemType = "Key"
         if itemNameLower:find("special") then
@@ -118,13 +145,11 @@ local function createESP(item)
         else
             itemType = "Regular Key"
         end
-    end
-    
-    -- Check throwables (Red)
-    if not color then
+    -- Check throwables (Orange)
+    else
         for _, throwable in pairs(throwablesList) do
             if itemNameLower:find(throwable) then
-                color = Color3.fromRGB(255, 0, 0) -- Bright Red
+                color = Color3.fromRGB(255, 165, 0) -- Orange
                 itemType = "Throwable"
                 break
             end
@@ -148,6 +173,9 @@ local function createESP(item)
     billboardGui.Parent = item
     billboardGui.Enabled = espEnabled
     
+    -- Make text bigger for Grandma and Players
+    local textSize = (isGrandma(item) or (item:FindFirstChild("Humanoid") and Players:GetPlayerFromCharacter(item))) and 14 or 12
+    
     local itemLabel = Instance.new("TextLabel")
     itemLabel.Size = UDim2.new(1, 0, 0.6, 0)
     itemLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -157,7 +185,7 @@ local function createESP(item)
     itemLabel.TextStrokeTransparency = 0
     itemLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     itemLabel.Font = Enum.Font.GothamBold
-    itemLabel.TextSize = 12
+    itemLabel.TextSize = textSize
     itemLabel.Parent = billboardGui
     
     local typeLabel = Instance.new("TextLabel")
@@ -169,8 +197,30 @@ local function createESP(item)
     typeLabel.TextStrokeTransparency = 0
     typeLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     typeLabel.Font = Enum.Font.GothamBold
-    typeLabel.TextSize = 10
+    typeLabel.TextSize = textSize - 2
     typeLabel.Parent = billboardGui
+    
+    -- Add distance tracker for Grandma and Players
+    if isGrandma(item) or (item:FindFirstChild("Humanoid") and Players:GetPlayerFromCharacter(item)) then
+        local distanceLabel = Instance.new("TextLabel")
+        distanceLabel.Size = UDim2.new(1, 0, 0.4, 0)
+        distanceLabel.Position = UDim2.new(0, 0, 1, 0)
+        distanceLabel.BackgroundTransparency = 1
+        distanceLabel.TextColor3 = color
+        distanceLabel.TextStrokeTransparency = 0
+        distanceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        distanceLabel.Font = Enum.Font.GothamBold
+        distanceLabel.TextSize = textSize - 2
+        distanceLabel.Parent = billboardGui
+        
+        -- Update distance
+        game:GetService("RunService").RenderStepped:Connect(function()
+            if item and item:IsDescendantOf(workspace) and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local distance = (LocalPlayer.Character.HumanoidRootPart.Position - item:GetPivot().Position).Magnitude
+                distanceLabel.Text = string.format("Distance: %.1f", distance)
+            end
+        end)
+    end
     
     table.insert(espItems, {
         item = item,
@@ -179,8 +229,18 @@ local function createESP(item)
     })
 end
 
--- Update shouldCreateESP function
+-- Update shouldCreateESP function to include players and Grandma
 local function shouldCreateESP(item)
+    -- Check if it's Grandma
+    if isGrandma(item) then
+        return true
+    end
+    
+    -- Check if it's a player (but not local player)
+    if item:IsA("Model") and item:FindFirstChild("Humanoid") and Players:GetPlayerFromCharacter(item) and Players:GetPlayerFromCharacter(item) ~= LocalPlayer then
+        return true
+    end
+    
     local itemNameLower = item.Name:lower()
     
     -- Check for keys
@@ -286,6 +346,25 @@ CloseCorner.Parent = CloseButton
 CloseButton.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
+
+-- Add player ESP when they join
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        wait(0.5) -- Wait for character to load
+        createESP(character)
+    end)
+end)
+
+-- Initialize ESP for existing players
+for _, player in pairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer and player.Character then
+        createESP(player.Character)
+    end
+    player.CharacterAdded:Connect(function(character)
+        wait(0.5) -- Wait for character to load
+        createESP(character)
+    end)
+end
 
 -- Initialize ESP
 initializeESP() 
