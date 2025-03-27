@@ -24,8 +24,8 @@ ScreenGui.Parent = game.CoreGui
 ScreenGui.ResetOnSpawn = false
 
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 300, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+MainFrame.Size = UDim2.new(0, 300, 0, 450)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -225)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
@@ -56,10 +56,27 @@ ContentFrame.Size = UDim2.new(1, -20, 1, -50)
 ContentFrame.Position = UDim2.new(0, 10, 0, 45)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
+ContentFrame.ClipsDescendants = true
 
-UIListLayout.Parent = ContentFrame
-UIListLayout.Padding = UDim.new(0, 15)
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+-- Add ScrollingFrame
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Size = UDim2.new(1, 0, 1, 0)
+ScrollingFrame.BackgroundTransparency = 1
+ScrollingFrame.ScrollBarThickness = 4
+ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
+ScrollingFrame.Parent = ContentFrame
+
+-- Move UIListLayout to ScrollingFrame
+UIListLayout.Parent = ScrollingFrame
+UIListLayout.Padding = UDim.new(0, 10)
+
+-- Function to update ScrollingFrame canvas size
+local function updateScrollingFrame()
+    local contentSize = UIListLayout.AbsoluteContentSize
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, contentSize.Y + 20)
+end
+
+UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateScrollingFrame)
 
 -- Create styled button function
 local function createStyledButton(text, parent)
@@ -94,8 +111,8 @@ local function createStyledButton(text, parent)
     return button
 end
 
--- Create sections
-local function createSection(title)
+-- Create main sections with better organization
+local function createSection(title, layoutOrder)
     local section = Instance.new("Frame")
     local sectionTitle = Instance.new("TextLabel")
     local content = Instance.new("Frame")
@@ -103,7 +120,8 @@ local function createSection(title)
     
     section.Size = UDim2.new(1, 0, 0, 100)
     section.BackgroundTransparency = 1
-    section.Parent = ContentFrame
+    section.LayoutOrder = layoutOrder
+    section.Parent = ScrollingFrame
     
     sectionTitle.Size = UDim2.new(1, 0, 0, 25)
     sectionTitle.BackgroundTransparency = 1
@@ -122,12 +140,14 @@ local function createSection(title)
     listLayout.Parent = content
     listLayout.Padding = UDim.new(0, 5)
     
-    return content
+    return content, section
 end
 
--- Create sections
-local flingContent = createSection("Fling")
-local teleportContent = createSection("Teleports")
+-- Create sections with layout order
+local autoShootContent, autoShootSection = createSection("Auto-Shoot", 1)
+local espContent, espSection = createSection("ESP Settings", 2)
+local flingContent, flingSection = createSection("Fling", 3)
+local teleportContent, teleportSection = createSection("Teleports", 4)
 
 -- Create fling controls
 local FlingInput = Instance.new("TextBox")
@@ -207,7 +227,7 @@ local function createESP(player)
     esp.StudsOffset = Vector3.new(0, 2.5, 0)
     esp.MaxDistance = 500 -- Increased view distance
     esp.ResetOnSpawn = false
-    esp.Enabled = true
+    esp.Enabled = espEnabled
     
     -- Main Frame
     espFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -262,6 +282,7 @@ local function createESP(player)
     local function updateESP()
         if player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") then
             esp.Parent = player.Character.Head
+            esp.Enabled = espEnabled
             
             -- Update name and role
             nameLabel.Text = player.Name
@@ -477,7 +498,7 @@ MinimizeButton.MouseButton1Click:Connect(function()
         MinimizeButton.Text = "+"
         ContentFrame.Visible = false
     else
-        MainFrame.Size = UDim2.new(0, 300, 0, 400)
+        MainFrame.Size = UDim2.new(0, 300, 0, 450)
         MinimizeButton.Text = "-"
         ContentFrame.Visible = true
     end
@@ -561,7 +582,7 @@ local function createHighlight(player)
 end
 
 -- Create Auto-Shoot Panel
-local autoShootSection = createSection("Auto-Shoot")
+local autoShootSection = createSection("Auto-Shoot", 1)
 local AutoShootToggle = createStyledButton("Auto-Shoot: OFF", autoShootSection)
 local autoShootEnabled = false
 
@@ -632,4 +653,44 @@ local function createNotification(text, color)
     notification.Parent = MainFrame
     
     game:GetService("Debris"):AddItem(notification, 2)
-end 
+end
+
+-- Add ESP Toggle button
+local ESPToggle = createStyledButton("ESP: ON", espContent)
+local espEnabled = true
+
+ESPToggle.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    ESPToggle.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
+    ESPToggle.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(45, 45, 45)
+    
+    -- Toggle ESP visibility
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local esp = player.Character:FindFirstChild("ESP")
+            local highlight = player.Character:FindFirstChild("Highlight")
+            if esp then esp.Enabled = espEnabled end
+            if highlight then highlight.Enabled = espEnabled end
+        end
+    end
+end)
+
+-- Update section sizes based on content
+local function updateSectionSize(section, content)
+    local contentSize = content:FindFirstChildOfClass("UIListLayout").AbsoluteContentSize
+    section.Size = UDim2.new(1, 0, 0, contentSize.Y + 30)
+end
+
+-- Update all section sizes
+game:GetService("RunService").RenderStepped:Connect(function()
+    updateSectionSize(autoShootSection, autoShootContent)
+    updateSectionSize(espSection, espContent)
+    updateSectionSize(flingSection, flingContent)
+    updateSectionSize(teleportSection, teleportContent)
+    updateScrollingFrame()
+end)
+
+-- Add corner radius to ScrollingFrame
+local ScrollCorner = Instance.new("UICorner")
+ScrollCorner.CornerRadius = UDim.new(0, 6)
+ScrollCorner.Parent = ScrollingFrame 
