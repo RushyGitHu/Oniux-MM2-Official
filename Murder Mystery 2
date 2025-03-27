@@ -68,7 +68,43 @@ UICorner_3.Parent = ESPToggle
 local espEnabled = false
 local espItems = {}
 
--- ESP Function
+-- Update the item detection lists
+local weaponsList = {
+    "bazooka",
+    "grenade",
+    "molotov",
+    "knife",
+    "machete",
+    "shovel",
+    "hammer",
+    "paintbrush",
+    "cereal",
+    "bowl",
+    "swing",
+    "smoke",
+    "bomb",
+    "rocket",
+    "rocketlauncher",
+    "rock"
+}
+
+local consumablesList = {
+    "potion",
+    "soda",
+    "medkit",
+    "stamina",
+    "shot"
+}
+
+local specialItemsList = {
+    "key",
+    "chest",
+    "trap",
+    "radar",
+    "bus"
+}
+
+-- Update ESP Function with color coding
 local function createESP(item)
     -- Check if ESP already exists for this item
     for _, esp in pairs(espItems) do
@@ -80,28 +116,83 @@ local function createESP(item)
     local highlight = Instance.new("Highlight")
     highlight.FillTransparency = 0.5
     highlight.OutlineTransparency = 0
-    highlight.FillColor = Color3.fromRGB(255, 255, 0)
-    highlight.OutlineColor = Color3.fromRGB(255, 165, 0)
+    
+    -- Color coding based on item type
+    local itemNameLower = item.Name:lower()
+    local itemType = "other"
+    local color
+    
+    -- Check weapon items (Red)
+    for _, weapon in pairs(weaponsList) do
+        if itemNameLower:find(weapon) then
+            color = Color3.fromRGB(255, 0, 0)
+            itemType = "Weapon"
+            break
+        end
+    end
+    
+    -- Check consumable items (Green)
+    if not color then
+        for _, consumable in pairs(consumablesList) do
+            if itemNameLower:find(consumable) then
+                color = Color3.fromRGB(0, 255, 0)
+                itemType = "Consumable"
+                break
+            end
+        end
+    end
+    
+    -- Check special items (Yellow)
+    if not color then
+        for _, special in pairs(specialItemsList) do
+            if itemNameLower:find(special) then
+                color = Color3.fromRGB(255, 255, 0)
+                itemType = "Special"
+                break
+            end
+        end
+    end
+    
+    -- Default color (White)
+    if not color then
+        color = Color3.fromRGB(255, 255, 255)
+    end
+    
+    highlight.FillColor = color
+    highlight.OutlineColor = color
     highlight.Parent = item
     highlight.Enabled = espEnabled
     
     local billboardGui = Instance.new("BillboardGui")
-    billboardGui.Size = UDim2.new(0, 100, 0, 25)
+    billboardGui.Size = UDim2.new(0, 100, 0, 35)
     billboardGui.AlwaysOnTop = true
     billboardGui.StudsOffset = Vector3.new(0, 2, 0)
     billboardGui.Parent = item
     billboardGui.Enabled = espEnabled
     
     local itemLabel = Instance.new("TextLabel")
-    itemLabel.Size = UDim2.new(1, 0, 1, 0)
+    itemLabel.Size = UDim2.new(1, 0, 0.6, 0)
+    itemLabel.Position = UDim2.new(0, 0, 0, 0)
     itemLabel.BackgroundTransparency = 1
     itemLabel.Text = item.Name
-    itemLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    itemLabel.TextColor3 = color
     itemLabel.TextStrokeTransparency = 0
     itemLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     itemLabel.Font = Enum.Font.GothamBold
     itemLabel.TextSize = 12
     itemLabel.Parent = billboardGui
+    
+    local typeLabel = Instance.new("TextLabel")
+    typeLabel.Size = UDim2.new(1, 0, 0.4, 0)
+    typeLabel.Position = UDim2.new(0, 0, 0.6, 0)
+    typeLabel.BackgroundTransparency = 1
+    typeLabel.Text = itemType
+    typeLabel.TextColor3 = color
+    typeLabel.TextStrokeTransparency = 0
+    typeLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    typeLabel.Font = Enum.Font.GothamBold
+    typeLabel.TextSize = 10
+    typeLabel.Parent = billboardGui
     
     table.insert(espItems, {
         item = item,
@@ -109,6 +200,49 @@ local function createESP(item)
         billboard = billboardGui
     })
 end
+
+-- Update item detection function
+local function shouldCreateESP(item)
+    local itemNameLower = item.Name:lower()
+    
+    -- Check all item lists
+    for _, weapon in pairs(weaponsList) do
+        if itemNameLower:find(weapon) then
+            return true
+        end
+    end
+    
+    for _, consumable in pairs(consumablesList) do
+        if itemNameLower:find(consumable) then
+            return true
+        end
+    end
+    
+    for _, special in pairs(specialItemsList) do
+        if itemNameLower:find(special) then
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- Update Initialize ESP function
+local function initializeESP()
+    for _, item in pairs(workspace:GetDescendants()) do
+        if (item:IsA("BasePart") or item:IsA("Model")) and shouldCreateESP(item) then
+            createESP(item)
+        end
+    end
+end
+
+-- Update Watch for new items
+workspace.DescendantAdded:Connect(function(item)
+    if (item:IsA("BasePart") or item:IsA("Model")) and shouldCreateESP(item) then
+        wait(0.1) -- Small delay to ensure the item is fully loaded
+        createESP(item)
+    end
+end)
 
 -- Toggle ESP Function
 local function toggleESP()
@@ -180,49 +314,6 @@ CloseCorner.Parent = CloseButton
 
 CloseButton.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
-end)
-
--- Initialize ESP for existing items
-local function initializeESP()
-    -- Look for items in the workspace
-    for _, item in pairs(workspace:GetDescendants()) do
-        -- Check for common item characteristics in Destroy Grandma
-        if item:IsA("BasePart") or item:IsA("Model") then
-            -- Check if it might be an item (you can add more specific checks)
-            if item.Name:lower():find("key") or 
-               item.Name:lower():find("tool") or 
-               item.Name:lower():find("item") or
-               item.Name:lower():find("collect") or
-               item.Name:lower():find("pickup") then
-                createESP(item)
-            end
-        end
-    end
-end
-
--- Watch for new items
-workspace.DescendantAdded:Connect(function(item)
-    if item:IsA("BasePart") or item:IsA("Model") then
-        if item.Name:lower():find("key") or 
-           item.Name:lower():find("tool") or 
-           item.Name:lower():find("item") or
-           item.Name:lower():find("collect") or
-           item.Name:lower():find("pickup") then
-            createESP(item)
-        end
-    end
-end)
-
--- Clean up removed items
-workspace.DescendantRemoving:Connect(function(item)
-    for i, esp in pairs(espItems) do
-        if esp.item == item then
-            if esp.highlight then esp.highlight:Destroy() end
-            if esp.billboard then esp.billboard:Destroy() end
-            table.remove(espItems, i)
-            break
-        end
-    end
 end)
 
 -- Initialize ESP
