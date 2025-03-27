@@ -260,46 +260,36 @@ local function createESP(player)
     healthFill.Parent = healthBar
     
     local function updateESP()
-        if player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") then
+        if player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") then
             esp.Parent = player.Character.Head
             
-            -- Update name
+            -- Update name and role
             nameLabel.Text = player.Name
             
-            -- Update distance
-            local distance = math.floor((LocalPlayer.Character.Head.Position - player.Character.Head.Position).Magnitude)
-            distanceLabel.Text = string.format("[%d studs]", distance)
-            
-            -- Update health
-            local health = player.Character.Humanoid.Health
-            local maxHealth = player.Character.Humanoid.MaxHealth
-            healthFill.Size = UDim2.new(math.clamp(health/maxHealth, 0, 1), 0, 1, 0)
-            healthFill.BackgroundColor3 = Color3.fromRGB(
-                255 * (1 - health/maxHealth),
-                255 * (health/maxHealth),
-                0
-            )
-            
-            -- Check roles and update colors
             if player:FindFirstChild("Role") then
-                if player.Role.Value == "Murderer" then
-                    roleLabel.TextColor3 = Color3.fromRGB(255, 0, 0) -- Pure Red
-                    roleLabel.Text = "✗ Murderer ✗"
+                local role = player.Role.Value
+                if role == "Murderer" then
+                    roleLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                    roleLabel.Text = "⚔️ Murderer ⚔️"
                     nameLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-                elseif player.Role.Value == "Sheriff" then
-                    roleLabel.TextColor3 = Color3.fromRGB(0, 0, 255) -- Pure Blue
-                    roleLabel.Text = "★ Sheriff ★"
+                elseif role == "Sheriff" then
+                    roleLabel.TextColor3 = Color3.fromRGB(0, 0, 255)
+                    roleLabel.Text = "🛡️ Sheriff 🛡️"
                     nameLabel.TextColor3 = Color3.fromRGB(0, 0, 255)
                 else
-                    roleLabel.TextColor3 = Color3.fromRGB(0, 255, 0) -- Pure Green
-                    roleLabel.Text = "Innocent"
+                    roleLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                    roleLabel.Text = "😇 Innocent"
                     nameLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                 end
             end
             
-            -- Scale ESP based on distance
-            local scale = math.clamp(1 - (distance/200), 0.5, 1)
-            esp.Size = UDim2.new(0, 200 * scale, 0, 60 * scale)
+            -- Update distance with better formatting
+            local distance = (LocalPlayer.Character.Head.Position - player.Character.Head.Position).Magnitude
+            if distance < 10 then
+                distanceLabel.Text = string.format("[%.1f studs]", distance)
+            else
+                distanceLabel.Text = string.format("[%d studs]", math.floor(distance))
+            end
         end
     end
     
@@ -318,6 +308,8 @@ end
 
 -- Auto-shoot murderer function
 local function autoShootMurderer()
+    if not autoShootEnabled then return end
+    
     local sheriff = nil
     local murderer = nil
     
@@ -437,14 +429,11 @@ TPGunButton.MouseButton1Click:Connect(function()
 end)
 
 TPLobbyButton.MouseButton1Click:Connect(function()
-    LocalPlayer.Character.HumanoidRootPart.CFrame = workspace.Lobby.CFrame
+    teleportToLobby()
 end)
 
 TPMapButton.MouseButton1Click:Connect(function()
-    local map = workspace:FindFirstChild("Map")
-    if map then
-        LocalPlayer.Character.HumanoidRootPart.CFrame = map:FindFirstChild("Spawn").CFrame
-    end
+    teleportToMap()
 end)
 
 -- Initialize ESP for all players
@@ -523,4 +512,124 @@ updateButtonStyle(FlingButton)
 updateButtonStyle(StopFlingButton)
 updateButtonStyle(TPGunButton)
 updateButtonStyle(TPLobbyButton)
-updateButtonStyle(TPMapButton) 
+updateButtonStyle(TPMapButton)
+
+-- Add these functions after the ESP section and before the GUI setup
+
+-- Improved teleport functions
+local function teleportToLobby()
+    local lobbySpawn = workspace:FindFirstChild("Lobby", true)
+    if lobbySpawn then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = lobbySpawn.CFrame + Vector3.new(0, 5, 0)
+    end
+end
+
+local function teleportToMap()
+    local map = workspace:FindFirstChild("Map")
+    if map then
+        local spawn = map:FindFirstChild("Spawns")
+        if spawn then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = spawn:GetChildren()[1].CFrame + Vector3.new(0, 5, 0)
+        end
+    end
+end
+
+-- Add highlight function
+local function createHighlight(player)
+    local highlight = Instance.new("Highlight")
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.Parent = player.Character
+    
+    local function updateHighlight()
+        if player:FindFirstChild("Role") then
+            if player.Role.Value == "Murderer" then
+                highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+            elseif player.Role.Value == "Sheriff" then
+                highlight.FillColor = Color3.fromRGB(0, 0, 255)
+                highlight.OutlineColor = Color3.fromRGB(0, 0, 255)
+            else
+                highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
+            end
+        end
+    end
+    
+    updateHighlight()
+    player:GetPropertyChangedSignal("Role"):Connect(updateHighlight)
+end
+
+-- Create Auto-Shoot Panel
+local autoShootSection = createSection("Auto-Shoot")
+local AutoShootToggle = createStyledButton("Auto-Shoot: OFF", autoShootSection)
+local autoShootEnabled = false
+
+AutoShootToggle.MouseButton1Click:Connect(function()
+    autoShootEnabled = not autoShootEnabled
+    AutoShootToggle.Text = "Auto-Shoot: " .. (autoShootEnabled and "ON" or "OFF")
+    AutoShootToggle.BackgroundColor3 = autoShootEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(45, 45, 45)
+end)
+
+-- Update the auto-shoot function
+local function autoShootMurderer()
+    if not autoShootEnabled then return end
+    
+    local sheriff = nil
+    local murderer = nil
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player:FindFirstChild("Role") then
+            if player.Role.Value == "Murderer" then
+                murderer = player
+            elseif player.Role.Value == "Sheriff" then
+                sheriff = player
+            end
+        end
+    end
+    
+    if sheriff and sheriff == LocalPlayer and murderer then
+        local gun = LocalPlayer.Character:FindFirstChild("Gun")
+        if gun and murderer.Character then
+            local rayOrigin = LocalPlayer.Character.Head.Position
+            local rayDirection = (murderer.Character.Head.Position - rayOrigin).Unit
+            local ray = Ray.new(rayOrigin, rayDirection * 100)
+            local hit = workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character})
+            
+            if hit and hit:IsDescendantOf(murderer.Character) then
+                gun.Shoot:FireServer(murderer.Character.Head.Position)
+            end
+        end
+    end
+end
+
+-- Update the ESP creation to include highlight
+local oldCreateESP = createESP
+function createESP(player)
+    oldCreateESP(player)
+    if player.Character then
+        createHighlight(player)
+    end
+    player.CharacterAdded:Connect(function(char)
+        createHighlight(player)
+    end)
+end
+
+-- Update teleport button connections
+TPLobbyButton.MouseButton1Click:Connect(teleportToLobby)
+TPMapButton.MouseButton1Click:Connect(teleportToMap)
+
+-- Add notifications function
+local function createNotification(text, color)
+    local notification = Instance.new("TextLabel")
+    notification.Text = text
+    notification.Size = UDim2.new(1, 0, 0, 30)
+    notification.Position = UDim2.new(0, 0, 0, -35)
+    notification.BackgroundColor3 = color or Color3.fromRGB(255, 50, 50)
+    notification.TextColor3 = Color3.fromRGB(255, 255, 255)
+    notification.Font = Enum.Font.GothamBold
+    notification.TextSize = 14
+    notification.Parent = MainFrame
+    
+    game:GetService("Debris"):AddItem(notification, 2)
+end 
