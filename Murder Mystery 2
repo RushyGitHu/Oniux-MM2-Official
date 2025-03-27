@@ -70,15 +70,21 @@ local espItems = {}
 
 -- ESP Function
 local function createESP(item)
+    -- Check if ESP already exists for this item
+    for _, esp in pairs(espItems) do
+        if esp.item == item then
+            return
+        end
+    end
+
     local highlight = Instance.new("Highlight")
     highlight.FillTransparency = 0.5
     highlight.OutlineTransparency = 0
-    highlight.FillColor = Color3.fromRGB(255, 255, 0) -- Yellow color for items
-    highlight.OutlineColor = Color3.fromRGB(255, 165, 0) -- Orange outline
+    highlight.FillColor = Color3.fromRGB(255, 255, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 165, 0)
     highlight.Parent = item
     highlight.Enabled = espEnabled
     
-    -- Create BillboardGui for item name
     local billboardGui = Instance.new("BillboardGui")
     billboardGui.Size = UDim2.new(0, 100, 0, 25)
     billboardGui.AlwaysOnTop = true
@@ -97,7 +103,11 @@ local function createESP(item)
     itemLabel.TextSize = 12
     itemLabel.Parent = billboardGui
     
-    table.insert(espItems, {highlight = highlight, billboard = billboardGui})
+    table.insert(espItems, {
+        item = item,
+        highlight = highlight,
+        billboard = billboardGui
+    })
 end
 
 -- Toggle ESP Function
@@ -106,14 +116,14 @@ local function toggleESP()
     ESPToggle.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
     ESPToggle.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(45, 45, 45)
     
-    -- Update existing ESP
     for _, esp in pairs(espItems) do
-        esp.highlight.Enabled = espEnabled
-        esp.billboard.Enabled = espEnabled
+        if esp.highlight and esp.billboard then
+            esp.highlight.Enabled = espEnabled
+            esp.billboard.Enabled = espEnabled
+        end
     end
 end
 
--- Connect toggle button
 ESPToggle.MouseButton1Click:Connect(toggleESP)
 
 -- Make GUI draggable
@@ -174,11 +184,16 @@ end)
 
 -- Initialize ESP for existing items
 local function initializeESP()
-    -- Add items that you want to ESP here
-    local itemsFolder = workspace:FindFirstChild("Items")
-    if itemsFolder then
-        for _, item in pairs(itemsFolder:GetDescendants()) do
-            if item:IsA("Model") or item:IsA("Part") or item:IsA("MeshPart") then
+    -- Look for items in the workspace
+    for _, item in pairs(workspace:GetDescendants()) do
+        -- Check for common item characteristics in Destroy Grandma
+        if item:IsA("BasePart") or item:IsA("Model") then
+            -- Check if it might be an item (you can add more specific checks)
+            if item.Name:lower():find("key") or 
+               item.Name:lower():find("tool") or 
+               item.Name:lower():find("item") or
+               item.Name:lower():find("collect") or
+               item.Name:lower():find("pickup") then
                 createESP(item)
             end
         end
@@ -187,9 +202,25 @@ end
 
 -- Watch for new items
 workspace.DescendantAdded:Connect(function(item)
-    if item:IsA("Model") or item:IsA("Part") or item:IsA("MeshPart") then
-        if item:IsDescendantOf(workspace.Items) then
+    if item:IsA("BasePart") or item:IsA("Model") then
+        if item.Name:lower():find("key") or 
+           item.Name:lower():find("tool") or 
+           item.Name:lower():find("item") or
+           item.Name:lower():find("collect") or
+           item.Name:lower():find("pickup") then
             createESP(item)
+        end
+    end
+end)
+
+-- Clean up removed items
+workspace.DescendantRemoving:Connect(function(item)
+    for i, esp in pairs(espItems) do
+        if esp.item == item then
+            if esp.highlight then esp.highlight:Destroy() end
+            if esp.billboard then esp.billboard:Destroy() end
+            table.remove(espItems, i)
+            break
         end
     end
 end)
