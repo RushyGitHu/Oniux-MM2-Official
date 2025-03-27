@@ -77,11 +77,7 @@ local weaponsList = {
     "machete",
     "shovel",
     "hammer",
-    "paintbrush",
-    "cereal",
     "bowl",
-    "swing",
-    "smoke",
     "bomb",
     "rocket",
     "rocketlauncher",
@@ -98,10 +94,7 @@ local consumablesList = {
 
 local specialItemsList = {
     "key",
-    "chest",
-    "trap",
-    "radar",
-    "bus"
+    "chest"
 }
 
 -- Update ESP Function with color coding
