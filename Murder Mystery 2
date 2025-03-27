@@ -1,8 +1,5 @@
--- MM2 Script with ESP, Teleports, Auto-shoot, and Fling
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
-local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 -- Create GUI
@@ -13,19 +10,14 @@ local TopBar = Instance.new("Frame")
 local UICorner_2 = Instance.new("UICorner")
 local Title = Instance.new("TextLabel")
 local ContentFrame = Instance.new("Frame")
-local UIListLayout = Instance.new("UIListLayout")
-
--- Create sections
-local FlingSection = Instance.new("Frame")
-local TeleportSection = Instance.new("Frame")
 
 -- GUI Setup
 ScreenGui.Parent = game.CoreGui
 ScreenGui.ResetOnSpawn = false
 
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 300, 0, 450)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -225)
+MainFrame.Size = UDim2.new(0, 200, 0, 120)
+MainFrame.Position = UDim2.new(0.8, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
@@ -45,7 +37,7 @@ UICorner_2.CornerRadius = UDim.new(0, 10)
 Title.Name = "Title"
 Title.Size = UDim2.new(1, 0, 1, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "MM2 Script"
+Title.Text = "Grandma ESP"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
@@ -56,124 +48,75 @@ ContentFrame.Size = UDim2.new(1, -20, 1, -50)
 ContentFrame.Position = UDim2.new(0, 10, 0, 45)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
-ContentFrame.ClipsDescendants = true
 
--- Add ScrollingFrame
-local ScrollingFrame = Instance.new("ScrollingFrame")
-ScrollingFrame.Size = UDim2.new(1, 0, 1, 0)
-ScrollingFrame.BackgroundTransparency = 1
-ScrollingFrame.ScrollBarThickness = 4
-ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
-ScrollingFrame.Parent = ContentFrame
+-- Create Toggle Button
+local ESPToggle = Instance.new("TextButton")
+ESPToggle.Size = UDim2.new(1, 0, 0, 35)
+ESPToggle.Position = UDim2.new(0, 0, 0, 0)
+ESPToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+ESPToggle.Text = "ESP: OFF"
+ESPToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+ESPToggle.Font = Enum.Font.GothamBold
+ESPToggle.TextSize = 14
+ESPToggle.Parent = ContentFrame
 
--- Move UIListLayout to ScrollingFrame
-UIListLayout.Parent = ScrollingFrame
-UIListLayout.Padding = UDim.new(0, 10)
+local UICorner_3 = Instance.new("UICorner")
+UICorner_3.CornerRadius = UDim.new(0, 6)
+UICorner_3.Parent = ESPToggle
 
--- Function to update ScrollingFrame canvas size
-local function updateScrollingFrame()
-    local contentSize = UIListLayout.AbsoluteContentSize
-    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, contentSize.Y + 20)
+-- ESP Variables
+local espEnabled = false
+local espItems = {}
+
+-- ESP Function
+local function createESP(item)
+    local highlight = Instance.new("Highlight")
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.FillColor = Color3.fromRGB(255, 255, 0) -- Yellow color for items
+    highlight.OutlineColor = Color3.fromRGB(255, 165, 0) -- Orange outline
+    highlight.Parent = item
+    highlight.Enabled = espEnabled
+    
+    -- Create BillboardGui for item name
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Size = UDim2.new(0, 100, 0, 25)
+    billboardGui.AlwaysOnTop = true
+    billboardGui.StudsOffset = Vector3.new(0, 2, 0)
+    billboardGui.Parent = item
+    billboardGui.Enabled = espEnabled
+    
+    local itemLabel = Instance.new("TextLabel")
+    itemLabel.Size = UDim2.new(1, 0, 1, 0)
+    itemLabel.BackgroundTransparency = 1
+    itemLabel.Text = item.Name
+    itemLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    itemLabel.TextStrokeTransparency = 0
+    itemLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    itemLabel.Font = Enum.Font.GothamBold
+    itemLabel.TextSize = 12
+    itemLabel.Parent = billboardGui
+    
+    table.insert(espItems, {highlight = highlight, billboard = billboardGui})
 end
 
-UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateScrollingFrame)
-
--- Create styled button function
-local function createStyledButton(text, parent)
-    local button = Instance.new("TextButton")
-    local uiCorner = Instance.new("UICorner")
+-- Toggle ESP Function
+local function toggleESP()
+    espEnabled = not espEnabled
+    ESPToggle.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
+    ESPToggle.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(45, 45, 45)
     
-    button.Size = UDim2.new(1, 0, 0, 45)
-    button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    button.Text = text
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.Font = Enum.Font.GothamSemibold
-    button.TextSize = 16
-    button.AutoButtonColor = false
-    button.Parent = parent
-    
-    uiCorner.CornerRadius = UDim.new(0, 6)
-    uiCorner.Parent = button
-    
-    -- Button hover effect
-    button.MouseEnter:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.2), {
-            BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        }):Play()
-    end)
-    
-    button.MouseLeave:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.2), {
-            BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-        }):Play()
-    end)
-    
-    return button
+    -- Update existing ESP
+    for _, esp in pairs(espItems) do
+        esp.highlight.Enabled = espEnabled
+        esp.billboard.Enabled = espEnabled
+    end
 end
 
--- Create main sections with better organization
-local function createSection(title, layoutOrder)
-    local section = Instance.new("Frame")
-    local sectionTitle = Instance.new("TextLabel")
-    local content = Instance.new("Frame")
-    local listLayout = Instance.new("UIListLayout")
-    
-    section.Size = UDim2.new(1, 0, 0, 100)
-    section.BackgroundTransparency = 1
-    section.LayoutOrder = layoutOrder
-    section.Parent = ScrollingFrame
-    
-    sectionTitle.Size = UDim2.new(1, 0, 0, 25)
-    sectionTitle.BackgroundTransparency = 1
-    sectionTitle.Text = title
-    sectionTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    sectionTitle.Font = Enum.Font.GothamBold
-    sectionTitle.TextSize = 14
-    sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
-    sectionTitle.Parent = section
-    
-    content.Size = UDim2.new(1, 0, 1, -25)
-    content.Position = UDim2.new(0, 0, 0, 25)
-    content.BackgroundTransparency = 1
-    content.Parent = section
-    
-    listLayout.Parent = content
-    listLayout.Padding = UDim.new(0, 5)
-    
-    return content, section
-end
+-- Connect toggle button
+ESPToggle.MouseButton1Click:Connect(toggleESP)
 
--- Create sections with layout order
-local autoShootContent, autoShootSection = createSection("Auto-Shoot", 1)
-local espContent, espSection = createSection("ESP Settings", 2)
-local flingContent, flingSection = createSection("Fling", 3)
-local teleportContent, teleportSection = createSection("Teleports", 4)
-
--- Create fling controls
-local FlingInput = Instance.new("TextBox")
-FlingInput.Size = UDim2.new(1, 0, 0, 45)
-FlingInput.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-FlingInput.PlaceholderText = "👤 Enter username to fling"
-FlingInput.Text = ""
-FlingInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-FlingInput.PlaceholderColor3 = Color3.fromRGB(180, 180, 180)
-FlingInput.Font = Enum.Font.Gotham
-FlingInput.TextSize = 16
-FlingInput.Parent = flingContent
-
-local uiCorner = Instance.new("UICorner")
-uiCorner.CornerRadius = UDim.new(0, 6)
-uiCorner.Parent = FlingInput
-
-local FlingButton = createStyledButton("Fling Player", flingContent)
-local StopFlingButton = createStyledButton("Stop Fling", flingContent)
-
--- Create teleport buttons
-local TPGunButton = createStyledButton("TP to Gun", teleportContent)
-local TPLobbyButton = createStyledButton("TP to Lobby", teleportContent)
-local TPMapButton = createStyledButton("TP to Map", teleportContent)
-
--- Make GUI draggable for both PC and mobile
+-- Make GUI draggable
 local dragging
 local dragInput
 local dragStart
@@ -204,310 +147,16 @@ TopBar.InputChanged:Connect(function(input)
     end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         updateDrag(input)
     end
 end)
 
--- ESP Function
-local function createESP(player)
-    local esp = Instance.new("BillboardGui")
-    local espFrame = Instance.new("Frame")
-    local nameLabel = Instance.new("TextLabel")
-    local roleLabel = Instance.new("TextLabel")
-    local distanceLabel = Instance.new("TextLabel")
-    local healthBar = Instance.new("Frame")
-    local healthFill = Instance.new("Frame")
-    
-    -- ESP Setup
-    esp.Name = "ESP"
-    esp.Size = UDim2.new(0, 200, 0, 60)
-    esp.AlwaysOnTop = true
-    esp.StudsOffset = Vector3.new(0, 2.5, 0)
-    esp.MaxDistance = 500 -- Increased view distance
-    esp.ResetOnSpawn = false
-    esp.Enabled = espEnabled
-    
-    -- Main Frame
-    espFrame.Size = UDim2.new(1, 0, 1, 0)
-    espFrame.BackgroundTransparency = 1
-    espFrame.Parent = esp
-    
-    -- Name Label
-    nameLabel.Size = UDim2.new(1, 0, 0.33, 0)
-    nameLabel.Position = UDim2.new(0, 0, 0, 0)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.TextSize = 14
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nameLabel.TextStrokeTransparency = 0
-    nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    nameLabel.Parent = espFrame
-    
-    -- Role Label
-    roleLabel.Size = UDim2.new(1, 0, 0.33, 0)
-    roleLabel.Position = UDim2.new(0, 0, 0.33, 0)
-    roleLabel.BackgroundTransparency = 1
-    roleLabel.TextSize = 14
-    roleLabel.Font = Enum.Font.GothamBold
-    roleLabel.TextStrokeTransparency = 0
-    roleLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    roleLabel.Parent = espFrame
-    
-    -- Distance Label
-    distanceLabel.Size = UDim2.new(1, 0, 0.33, 0)
-    distanceLabel.Position = UDim2.new(0, 0, 0.66, 0)
-    distanceLabel.BackgroundTransparency = 1
-    distanceLabel.TextSize = 12
-    distanceLabel.Font = Enum.Font.GothamBold
-    distanceLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    distanceLabel.TextStrokeTransparency = 0
-    distanceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    distanceLabel.Parent = espFrame
-    
-    -- Health Bar Background
-    healthBar.Size = UDim2.new(0.8, 0, 0.1, 0)
-    healthBar.Position = UDim2.new(0.1, 0, 1, 2)
-    healthBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    healthBar.BorderSizePixel = 0
-    healthBar.Parent = espFrame
-    
-    -- Health Bar Fill
-    healthFill.Size = UDim2.new(1, 0, 1, 0)
-    healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-    healthFill.BorderSizePixel = 0
-    healthFill.Parent = healthBar
-    
-    local function updateESP()
-        if player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") then
-            esp.Parent = player.Character.Head
-            esp.Enabled = espEnabled
-            
-            -- Update name and role
-            nameLabel.Text = player.Name
-            
-            if player:FindFirstChild("Role") then
-                local role = player.Role.Value
-                if role == "Murderer" then
-                    roleLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-                    roleLabel.Text = "⚔️ Murderer ⚔️"
-                    nameLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-                elseif role == "Sheriff" then
-                    roleLabel.TextColor3 = Color3.fromRGB(0, 0, 255)
-                    roleLabel.Text = "🛡️ Sheriff 🛡️"
-                    nameLabel.TextColor3 = Color3.fromRGB(0, 0, 255)
-                else
-                    roleLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                    roleLabel.Text = "😇 Innocent"
-                    nameLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                end
-            end
-            
-            -- Update distance with better formatting
-            local distance = (LocalPlayer.Character.Head.Position - player.Character.Head.Position).Magnitude
-            if distance < 10 then
-                distanceLabel.Text = string.format("[%.1f studs]", distance)
-            else
-                distanceLabel.Text = string.format("[%d studs]", math.floor(distance))
-            end
-        end
-    end
-    
-    updateESP()
-    player.CharacterAdded:Connect(updateESP)
-    
-    -- Update ESP more frequently for better accuracy
-    spawn(function()
-        while wait(0.1) do
-            if player.Character and LocalPlayer.Character then
-                updateESP()
-            end
-        end
-    end)
-end
-
--- Auto-shoot murderer function
-local function autoShootMurderer()
-    if not autoShootEnabled then return end
-    
-    local sheriff = nil
-    local murderer = nil
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player:FindFirstChild("Role") then
-            if player.Role.Value == "Murderer" then
-                murderer = player
-            elseif player.Role.Value == "Sheriff" then
-                sheriff = player
-            end
-        end
-    end
-    
-    if sheriff and sheriff == LocalPlayer and murderer then
-        local gun = LocalPlayer.Character:FindFirstChild("Gun")
-        if gun and murderer.Character then
-            local rayOrigin = LocalPlayer.Character.Head.Position
-            local rayDirection = (murderer.Character.Head.Position - rayOrigin).Unit
-            local ray = Ray.new(rayOrigin, rayDirection * 100)
-            local hit = workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character})
-            
-            if hit and hit:IsDescendantOf(murderer.Character) then
-                gun.Shoot:FireServer(murderer.Character.Head.Position)
-            end
-        end
-    end
-end
-
--- Fling function
-local originalPosition = nil
-local isFlinging = false
-
-local function flingPlayer(targetUsername)
-    local target = Players:FindFirstChild(targetUsername)
-    if target and target.Character then
-        isFlinging = true
-        originalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
-        
-        -- Set up for better flinging
-        local oldVelocity = LocalPlayer.Character.HumanoidRootPart.Velocity
-        local oldGyro = Instance.new("BodyGyro")
-        oldGyro.P = 0
-        oldGyro.MaxTorque = Vector3.new(0, 0, 0)
-        oldGyro.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
-        oldGyro.Parent = LocalPlayer.Character.HumanoidRootPart
-        
-        -- Disable character animations
-        local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid:ChangeState(11)
-        end
-        
-        while isFlinging and target.Character and target.Character:FindFirstChild("HumanoidRootPart") do
-            -- Update position and velocity more aggressively
-            LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 0.75)
-            LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(9999, 9999, 9999)
-            LocalPlayer.Character.HumanoidRootPart.RotVelocity = Vector3.new(9999, 9999, 9999)
-            game:GetService("RunService").Heartbeat:Wait()
-        end
-        
-        -- Clean up
-        if oldGyro then
-            oldGyro:Destroy()
-        end
-    else
-        -- Notify if player not found
-        local notification = Instance.new("TextLabel")
-        notification.Text = "Player not found!"
-        notification.Size = UDim2.new(1, 0, 0, 30)
-        notification.Position = UDim2.new(0, 0, 0, -35)
-        notification.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-        notification.TextColor3 = Color3.fromRGB(255, 255, 255)
-        notification.Font = Enum.Font.GothamBold
-        notification.TextSize = 14
-        notification.Parent = MainFrame
-        
-        game:GetService("Debris"):AddItem(notification, 2)
-    end
-end
-
--- Stop fling function
-local function stopFling()
-    isFlinging = false
-    if originalPosition then
-        -- Smoothly return to original position
-        local tween = TweenService:Create(
-            LocalPlayer.Character.HumanoidRootPart,
-            TweenInfo.new(0.5, Enum.EasingStyle.Quad),
-            {CFrame = originalPosition}
-        )
-        tween:Play()
-        
-        -- Reset velocities
-        LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-        LocalPlayer.Character.HumanoidRootPart.RotVelocity = Vector3.new(0, 0, 0)
-        
-        -- Reset character state
-        local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid:ChangeState(2)
-        end
-    end
-end
-
--- Setup GUI buttons and functionality
-FlingButton.MouseButton1Click:Connect(function()
-    flingPlayer(FlingInput.Text)
-end)
-
-StopFlingButton.MouseButton1Click:Connect(stopFling)
-
-TPGunButton.MouseButton1Click:Connect(function()
-    local gun = workspace:FindFirstChild("GunDrop")
-    if gun then
-        LocalPlayer.Character.HumanoidRootPart.CFrame = gun.CFrame
-    end
-end)
-
-TPLobbyButton.MouseButton1Click:Connect(function()
-    teleportToLobby()
-end)
-
-TPMapButton.MouseButton1Click:Connect(function()
-    teleportToMap()
-end)
-
--- Initialize ESP for all players
-for _, player in pairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        createESP(player)
-    end
-end
-
-Players.PlayerAdded:Connect(function(player)
-    if player ~= LocalPlayer then
-        createESP(player)
-    end
-end)
-
--- Auto-shoot loop
-game:GetService("RunService").Heartbeat:Connect(function()
-    autoShootMurderer()
-end)
-
--- Add a minimize button
-local MinimizeButton = Instance.new("TextButton")
-MinimizeButton.Size = UDim2.new(0, 30, 0, 30)
-MinimizeButton.Position = UDim2.new(1, -35, 0, 5)
-MinimizeButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-MinimizeButton.Text = "-"
-MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeButton.Font = Enum.Font.GothamBold
-MinimizeButton.TextSize = 20
-MinimizeButton.Parent = TopBar
-
-local MinimizeCorner = Instance.new("UICorner")
-MinimizeCorner.CornerRadius = UDim.new(0, 6)
-MinimizeCorner.Parent = MinimizeButton
-
-local minimized = false
-MinimizeButton.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    if minimized then
-        MainFrame.Size = UDim2.new(0, 300, 0, 40)
-        MinimizeButton.Text = "+"
-        ContentFrame.Visible = false
-    else
-        MainFrame.Size = UDim2.new(0, 300, 0, 450)
-        MinimizeButton.Text = "-"
-        ContentFrame.Visible = true
-    end
-end)
-
--- Add a close button
+-- Add close button
 local CloseButton = Instance.new("TextButton")
 CloseButton.Size = UDim2.new(0, 30, 0, 30)
-CloseButton.Position = UDim2.new(1, -70, 0, 5)
+CloseButton.Position = UDim2.new(1, -35, 0, 5)
 CloseButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -523,174 +172,27 @@ CloseButton.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Make buttons bigger for mobile
-local function updateButtonStyle(button)
-    button.Size = UDim2.new(1, 0, 0, 45)
-    button.TextSize = 16
-end
-
-updateButtonStyle(FlingButton)
-updateButtonStyle(StopFlingButton)
-updateButtonStyle(TPGunButton)
-updateButtonStyle(TPLobbyButton)
-updateButtonStyle(TPMapButton)
-
--- Add these functions after the ESP section and before the GUI setup
-
--- Improved teleport functions
-local function teleportToLobby()
-    local lobbySpawn = workspace:FindFirstChild("Lobby", true)
-    if lobbySpawn then
-        LocalPlayer.Character.HumanoidRootPart.CFrame = lobbySpawn.CFrame + Vector3.new(0, 5, 0)
-    end
-end
-
-local function teleportToMap()
-    local map = workspace:FindFirstChild("Map")
-    if map then
-        local spawn = map:FindFirstChild("Spawns")
-        if spawn then
-            LocalPlayer.Character.HumanoidRootPart.CFrame = spawn:GetChildren()[1].CFrame + Vector3.new(0, 5, 0)
-        end
-    end
-end
-
--- Add highlight function
-local function createHighlight(player)
-    local highlight = Instance.new("Highlight")
-    highlight.FillTransparency = 0.5
-    highlight.OutlineTransparency = 0
-    highlight.Parent = player.Character
-    
-    local function updateHighlight()
-        if player:FindFirstChild("Role") then
-            if player.Role.Value == "Murderer" then
-                highlight.FillColor = Color3.fromRGB(255, 0, 0)
-                highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
-            elseif player.Role.Value == "Sheriff" then
-                highlight.FillColor = Color3.fromRGB(0, 0, 255)
-                highlight.OutlineColor = Color3.fromRGB(0, 0, 255)
-            else
-                highlight.FillColor = Color3.fromRGB(0, 255, 0)
-                highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
-            end
-        end
-    end
-    
-    updateHighlight()
-    player:GetPropertyChangedSignal("Role"):Connect(updateHighlight)
-end
-
--- Create Auto-Shoot Panel
-local autoShootSection = createSection("Auto-Shoot", 1)
-local AutoShootToggle = createStyledButton("Auto-Shoot: OFF", autoShootSection)
-local autoShootEnabled = false
-
-AutoShootToggle.MouseButton1Click:Connect(function()
-    autoShootEnabled = not autoShootEnabled
-    AutoShootToggle.Text = "Auto-Shoot: " .. (autoShootEnabled and "ON" or "OFF")
-    AutoShootToggle.BackgroundColor3 = autoShootEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(45, 45, 45)
-end)
-
--- Update the auto-shoot function
-local function autoShootMurderer()
-    if not autoShootEnabled then return end
-    
-    local sheriff = nil
-    local murderer = nil
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player:FindFirstChild("Role") then
-            if player.Role.Value == "Murderer" then
-                murderer = player
-            elseif player.Role.Value == "Sheriff" then
-                sheriff = player
-            end
-        end
-    end
-    
-    if sheriff and sheriff == LocalPlayer and murderer then
-        local gun = LocalPlayer.Character:FindFirstChild("Gun")
-        if gun and murderer.Character then
-            local rayOrigin = LocalPlayer.Character.Head.Position
-            local rayDirection = (murderer.Character.Head.Position - rayOrigin).Unit
-            local ray = Ray.new(rayOrigin, rayDirection * 100)
-            local hit = workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character})
-            
-            if hit and hit:IsDescendantOf(murderer.Character) then
-                gun.Shoot:FireServer(murderer.Character.Head.Position)
+-- Initialize ESP for existing items
+local function initializeESP()
+    -- Add items that you want to ESP here
+    local itemsFolder = workspace:FindFirstChild("Items")
+    if itemsFolder then
+        for _, item in pairs(itemsFolder:GetDescendants()) do
+            if item:IsA("Model") or item:IsA("Part") or item:IsA("MeshPart") then
+                createESP(item)
             end
         end
     end
 end
 
--- Update the ESP creation to include highlight
-local oldCreateESP = createESP
-function createESP(player)
-    oldCreateESP(player)
-    if player.Character then
-        createHighlight(player)
-    end
-    player.CharacterAdded:Connect(function(char)
-        createHighlight(player)
-    end)
-end
-
--- Update teleport button connections
-TPLobbyButton.MouseButton1Click:Connect(teleportToLobby)
-TPMapButton.MouseButton1Click:Connect(teleportToMap)
-
--- Add notifications function
-local function createNotification(text, color)
-    local notification = Instance.new("TextLabel")
-    notification.Text = text
-    notification.Size = UDim2.new(1, 0, 0, 30)
-    notification.Position = UDim2.new(0, 0, 0, -35)
-    notification.BackgroundColor3 = color or Color3.fromRGB(255, 50, 50)
-    notification.TextColor3 = Color3.fromRGB(255, 255, 255)
-    notification.Font = Enum.Font.GothamBold
-    notification.TextSize = 14
-    notification.Parent = MainFrame
-    
-    game:GetService("Debris"):AddItem(notification, 2)
-end
-
--- Add ESP Toggle button
-local ESPToggle = createStyledButton("ESP: ON", espContent)
-local espEnabled = true
-
-ESPToggle.MouseButton1Click:Connect(function()
-    espEnabled = not espEnabled
-    ESPToggle.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
-    ESPToggle.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(45, 45, 45)
-    
-    -- Toggle ESP visibility
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local esp = player.Character:FindFirstChild("ESP")
-            local highlight = player.Character:FindFirstChild("Highlight")
-            if esp then esp.Enabled = espEnabled end
-            if highlight then highlight.Enabled = espEnabled end
+-- Watch for new items
+workspace.DescendantAdded:Connect(function(item)
+    if item:IsA("Model") or item:IsA("Part") or item:IsA("MeshPart") then
+        if item:IsDescendantOf(workspace.Items) then
+            createESP(item)
         end
     end
 end)
 
--- Update section sizes based on content
-local function updateSectionSize(section, content)
-    local contentSize = content:FindFirstChildOfClass("UIListLayout").AbsoluteContentSize
-    section.Size = UDim2.new(1, 0, 0, contentSize.Y + 30)
-end
-
--- Update all section sizes
-game:GetService("RunService").RenderStepped:Connect(function()
-    updateSectionSize(autoShootSection, autoShootContent)
-    updateSectionSize(espSection, espContent)
-    updateSectionSize(flingSection, flingContent)
-    updateSectionSize(teleportSection, teleportContent)
-    updateScrollingFrame()
-end)
-
--- Add corner radius to ScrollingFrame
-local ScrollCorner = Instance.new("UICorner")
-ScrollCorner.CornerRadius = UDim.new(0, 6)
-ScrollCorner.Parent = ScrollingFrame 
+-- Initialize ESP
+initializeESP() 
