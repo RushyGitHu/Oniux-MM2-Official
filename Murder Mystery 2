@@ -91,14 +91,31 @@ local throwablesList = {
     "rocketlauncher"
 }
 
--- Add these lists after the existing lists
+-- Update the grandmaList to be more specific
 local grandmaList = {
     "grandma",
-    "granny"
+    "granny",
+    "grandmother"
 }
 
--- Add this function to check if an item is Grandma
+-- Add a list of parts to ignore
+local ignoredParts = {
+    "spawn",
+    "spawnpoint",
+    "spawnlocation",
+    "baseplate",
+    "terrain",
+    "part",
+    "block"
+}
+
+-- Update isGrandma function to be more accurate
 local function isGrandma(item)
+    -- Check if it's a character model
+    if not (item:IsA("Model") and item:FindFirstChild("Humanoid")) then
+        return false
+    end
+    
     local itemNameLower = item.Name:lower()
     for _, name in pairs(grandmaList) do
         if itemNameLower:find(name) then
@@ -108,7 +125,42 @@ local function isGrandma(item)
     return false
 end
 
--- Update createESP function to include players and Grandma
+-- Update shouldCreateESP function to exclude spawn parts
+local function shouldCreateESP(item)
+    -- First check if it's a system/spawn part that should be ignored
+    local itemNameLower = item.Name:lower()
+    for _, ignoredPart in pairs(ignoredParts) do
+        if itemNameLower:find(ignoredPart) then
+            return false
+        end
+    end
+    
+    -- Check if it's Grandma
+    if isGrandma(item) then
+        return true
+    end
+    
+    -- Check if it's a player (but not local player)
+    if item:IsA("Model") and item:FindFirstChild("Humanoid") and Players:GetPlayerFromCharacter(item) and Players:GetPlayerFromCharacter(item) ~= LocalPlayer then
+        return true
+    end
+    
+    -- Check for keys
+    if itemNameLower:find("key") then
+        return true
+    end
+    
+    -- Check throwables
+    for _, throwable in pairs(throwablesList) do
+        if itemNameLower:find(throwable) then
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- Update createESP function to make Grandma more visible
 local function createESP(item)
     -- Check if ESP already exists for this item
     for _, esp in pairs(espItems) do
@@ -130,7 +182,12 @@ local function createESP(item)
     if isGrandma(item) then
         color = Color3.fromRGB(255, 0, 0) -- Bright Red
         itemType = "⚠️ GRANDMA ⚠️"
-        highlight.FillTransparency = 0.3 -- More visible
+        highlight.FillTransparency = 0.2 -- More visible
+        highlight.OutlineTransparency = 0
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 100, 100)
+        -- Make Grandma's ESP more visible through walls
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     -- Check if it's a player (Blue)
     elseif item:IsA("Model") and item:FindFirstChild("Humanoid") and Players:GetPlayerFromCharacter(item) and Players:GetPlayerFromCharacter(item) ~= LocalPlayer then
         color = Color3.fromRGB(0, 150, 255) -- Light Blue
@@ -229,51 +286,47 @@ local function createESP(item)
     })
 end
 
--- Update shouldCreateESP function to include players and Grandma
-local function shouldCreateESP(item)
-    -- Check if it's Grandma
-    if isGrandma(item) then
-        return true
-    end
-    
-    -- Check if it's a player (but not local player)
-    if item:IsA("Model") and item:FindFirstChild("Humanoid") and Players:GetPlayerFromCharacter(item) and Players:GetPlayerFromCharacter(item) ~= LocalPlayer then
-        return true
-    end
-    
-    local itemNameLower = item.Name:lower()
-    
-    -- Check for keys
-    if itemNameLower:find("key") then
-        return true
-    end
-    
-    -- Check throwables
-    for _, throwable in pairs(throwablesList) do
-        if itemNameLower:find(throwable) then
-            return true
+-- Add this function to handle character updates for Grandma
+local function handleCharacterUpdates(character)
+    if isGrandma(character) then
+        -- Remove any existing ESP
+        for i, esp in pairs(espItems) do
+            if esp.item == character then
+                if esp.highlight then esp.highlight:Destroy() end
+                if esp.billboard then esp.billboard:Destroy() end
+                table.remove(espItems, i)
+                break
+            end
         end
+        -- Create new ESP
+        createESP(character)
     end
-    
-    return false
 end
 
--- Update Initialize ESP function
+-- Update workspace.DescendantAdded connection
+workspace.DescendantAdded:Connect(function(item)
+    if item:IsA("Model") then
+        -- Wait for Humanoid to be added for characters
+        if item:WaitForChild("Humanoid", 2) then
+            wait(0.1) -- Small delay to ensure the character is fully loaded
+            handleCharacterUpdates(item)
+        end
+    elseif shouldCreateESP(item) then
+        wait(0.1)
+        createESP(item)
+    end
+end)
+
+-- Initialize ESP with improved character detection
 local function initializeESP()
     for _, item in pairs(workspace:GetDescendants()) do
-        if (item:IsA("BasePart") or item:IsA("Model")) and shouldCreateESP(item) then
+        if item:IsA("Model") and item:FindFirstChild("Humanoid") then
+            handleCharacterUpdates(item)
+        elseif shouldCreateESP(item) then
             createESP(item)
         end
     end
 end
-
--- Update Watch for new items
-workspace.DescendantAdded:Connect(function(item)
-    if (item:IsA("BasePart") or item:IsA("Model")) and shouldCreateESP(item) then
-        wait(0.1) -- Small delay to ensure the item is fully loaded
-        createESP(item)
-    end
-end)
 
 -- Toggle ESP Function
 local function toggleESP()
