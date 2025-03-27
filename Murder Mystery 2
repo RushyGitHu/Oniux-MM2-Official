@@ -84,7 +84,11 @@ local throwablesList = {
     "paintbrush",
     "bowl",
     "cereal",
-    "bazooka"
+    "bazooka",
+    "shell",
+    "fish",
+    "rocket",
+    "rocketlauncher"
 }
 
 -- Remove old lists and update createESP function
