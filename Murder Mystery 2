@@ -193,22 +193,29 @@ end)
 -- ESP Function
 local function createESP(player)
     local esp = Instance.new("BillboardGui")
-    local espLabel = Instance.new("TextLabel")
     local espFrame = Instance.new("Frame")
     local nameLabel = Instance.new("TextLabel")
     local roleLabel = Instance.new("TextLabel")
+    local distanceLabel = Instance.new("TextLabel")
+    local healthBar = Instance.new("Frame")
+    local healthFill = Instance.new("Frame")
     
+    -- ESP Setup
     esp.Name = "ESP"
-    esp.Size = UDim2.new(0, 200, 0, 50)
+    esp.Size = UDim2.new(0, 200, 0, 60)
     esp.AlwaysOnTop = true
-    esp.StudsOffset = Vector3.new(0, 2, 0)
-    esp.MaxDistance = 150 -- Maximum distance to show ESP
+    esp.StudsOffset = Vector3.new(0, 2.5, 0)
+    esp.MaxDistance = 500 -- Increased view distance
+    esp.ResetOnSpawn = false
+    esp.Enabled = true
     
+    -- Main Frame
     espFrame.Size = UDim2.new(1, 0, 1, 0)
     espFrame.BackgroundTransparency = 1
     espFrame.Parent = esp
     
-    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    -- Name Label
+    nameLabel.Size = UDim2.new(1, 0, 0.33, 0)
     nameLabel.Position = UDim2.new(0, 0, 0, 0)
     nameLabel.BackgroundTransparency = 1
     nameLabel.TextSize = 14
@@ -216,11 +223,11 @@ local function createESP(player)
     nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     nameLabel.TextStrokeTransparency = 0
     nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    nameLabel.Text = player.Name
     nameLabel.Parent = espFrame
     
-    roleLabel.Size = UDim2.new(1, 0, 0.5, 0)
-    roleLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    -- Role Label
+    roleLabel.Size = UDim2.new(1, 0, 0.33, 0)
+    roleLabel.Position = UDim2.new(0, 0, 0.33, 0)
     roleLabel.BackgroundTransparency = 1
     roleLabel.TextSize = 14
     roleLabel.Font = Enum.Font.GothamBold
@@ -228,39 +235,80 @@ local function createESP(player)
     roleLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     roleLabel.Parent = espFrame
     
+    -- Distance Label
+    distanceLabel.Size = UDim2.new(1, 0, 0.33, 0)
+    distanceLabel.Position = UDim2.new(0, 0, 0.66, 0)
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.TextSize = 12
+    distanceLabel.Font = Enum.Font.GothamBold
+    distanceLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    distanceLabel.TextStrokeTransparency = 0
+    distanceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    distanceLabel.Parent = espFrame
+    
+    -- Health Bar Background
+    healthBar.Size = UDim2.new(0.8, 0, 0.1, 0)
+    healthBar.Position = UDim2.new(0.1, 0, 1, 2)
+    healthBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    healthBar.BorderSizePixel = 0
+    healthBar.Parent = espFrame
+    
+    -- Health Bar Fill
+    healthFill.Size = UDim2.new(1, 0, 1, 0)
+    healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    healthFill.BorderSizePixel = 0
+    healthFill.Parent = healthBar
+    
     local function updateESP()
-        if player.Character and player.Character:FindFirstChild("Head") then
+        if player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") then
             esp.Parent = player.Character.Head
+            
+            -- Update name
+            nameLabel.Text = player.Name
             
             -- Update distance
             local distance = math.floor((LocalPlayer.Character.Head.Position - player.Character.Head.Position).Magnitude)
-            nameLabel.Text = string.format("%s [%dm]", player.Name, distance)
+            distanceLabel.Text = string.format("[%d studs]", distance)
             
-            -- Check roles
+            -- Update health
+            local health = player.Character.Humanoid.Health
+            local maxHealth = player.Character.Humanoid.MaxHealth
+            healthFill.Size = UDim2.new(math.clamp(health/maxHealth, 0, 1), 0, 1, 0)
+            healthFill.BackgroundColor3 = Color3.fromRGB(
+                255 * (1 - health/maxHealth),
+                255 * (health/maxHealth),
+                0
+            )
+            
+            -- Check roles and update colors
             if player:FindFirstChild("Role") then
                 if player.Role.Value == "Murderer" then
-                    roleLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-                    roleLabel.Text = "Murderer"
-                    espFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                    roleLabel.TextColor3 = Color3.fromRGB(255, 0, 0) -- Pure Red
+                    roleLabel.Text = "✗ Murderer ✗"
+                    nameLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
                 elseif player.Role.Value == "Sheriff" then
-                    roleLabel.TextColor3 = Color3.fromRGB(0, 0, 255)
-                    roleLabel.Text = "Sheriff"
-                    espFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 255)
+                    roleLabel.TextColor3 = Color3.fromRGB(0, 0, 255) -- Pure Blue
+                    roleLabel.Text = "★ Sheriff ★"
+                    nameLabel.TextColor3 = Color3.fromRGB(0, 0, 255)
                 else
-                    roleLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                    roleLabel.TextColor3 = Color3.fromRGB(0, 255, 0) -- Pure Green
                     roleLabel.Text = "Innocent"
-                    espFrame.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+                    nameLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                 end
             end
+            
+            -- Scale ESP based on distance
+            local scale = math.clamp(1 - (distance/200), 0.5, 1)
+            esp.Size = UDim2.new(0, 200 * scale, 0, 60 * scale)
         end
     end
     
     updateESP()
     player.CharacterAdded:Connect(updateESP)
     
-    -- Update ESP every 0.5 seconds for distance
+    -- Update ESP more frequently for better accuracy
     spawn(function()
-        while wait(0.5) do
+        while wait(0.1) do
             if player.Character and LocalPlayer.Character then
                 updateESP()
             end
