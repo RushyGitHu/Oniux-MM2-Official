@@ -1,0 +1,173 @@
+-- MM2 Script with ESP, Teleports, Auto-shoot, and Fling
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local UserInputService = game:GetService("UserInputService")
+
+-- Create GUI
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local FlingFrame = Instance.new("Frame")
+local FlingInput = Instance.new("TextBox")
+local FlingButton = Instance.new("TextButton")
+local StopFlingButton = Instance.new("TextButton")
+local TeleportFrame = Instance.new("Frame")
+local TPGunButton = Instance.new("TextButton")
+local TPLobbyButton = Instance.new("TextButton")
+local TPMapButton = Instance.new("TextButton")
+
+-- GUI Setup
+ScreenGui.Parent = game.CoreGui
+MainFrame.Size = UDim2.new(0, 200, 0, 300)
+MainFrame.Position = UDim2.new(0.8, 0, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MainFrame.Parent = ScreenGui
+
+-- ESP Function
+local function createESP(player)
+    local esp = Instance.new("BillboardGui")
+    local espLabel = Instance.new("TextLabel")
+    
+    esp.Name = "ESP"
+    esp.Size = UDim2.new(0, 200, 0, 50)
+    esp.AlwaysOnTop = true
+    esp.StudsOffset = Vector3.new(0, 2, 0)
+    
+    espLabel.Size = UDim2.new(1, 0, 1, 0)
+    espLabel.BackgroundTransparency = 1
+    espLabel.TextSize = 14
+    espLabel.Font = Enum.Font.SourceSansBold
+    espLabel.TextStrokeTransparency = 0
+    espLabel.Parent = esp
+    
+    local function updateESP()
+        if player.Character then
+            esp.Parent = player.Character:FindFirstChild("Head")
+            
+            -- Check roles
+            if player:FindFirstChild("Role") then
+                if player.Role.Value == "Murderer" then
+                    espLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                    espLabel.Text = "Murderer"
+                elseif player.Role.Value == "Sheriff" then
+                    espLabel.TextColor3 = Color3.fromRGB(0, 0, 255)
+                    espLabel.Text = "Sheriff"
+                else
+                    espLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                    espLabel.Text = "Innocent"
+                end
+            end
+        end
+    end
+    
+    updateESP()
+    player.CharacterAdded:Connect(updateESP)
+end
+
+-- Auto-shoot murderer function
+local function autoShootMurderer()
+    local sheriff = nil
+    local murderer = nil
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player:FindFirstChild("Role") then
+            if player.Role.Value == "Murderer" then
+                murderer = player
+            elseif player.Role.Value == "Sheriff" then
+                sheriff = player
+            end
+        end
+    end
+    
+    if sheriff and sheriff == LocalPlayer and murderer then
+        local gun = LocalPlayer.Character:FindFirstChild("Gun")
+        if gun and murderer.Character then
+            local rayOrigin = LocalPlayer.Character.Head.Position
+            local rayDirection = (murderer.Character.Head.Position - rayOrigin).Unit
+            local ray = Ray.new(rayOrigin, rayDirection * 100)
+            local hit = workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character})
+            
+            if hit and hit:IsDescendantOf(murderer.Character) then
+                gun.Shoot:FireServer(murderer.Character.Head.Position)
+            end
+        end
+    end
+end
+
+-- Fling function
+local originalPosition = nil
+local isFlinging = false
+
+local function flingPlayer(targetUsername)
+    local target = Players:FindFirstChild(targetUsername)
+    if target and target.Character then
+        isFlinging = true
+        originalPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
+        
+        while isFlinging do
+            LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
+            LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(500, 500, 500)
+            wait()
+        end
+    end
+end
+
+-- Stop fling function
+local function stopFling()
+    isFlinging = false
+    if originalPosition then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = originalPosition
+        LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+    end
+end
+
+-- Setup GUI buttons and functionality
+FlingInput.PlaceholderText = "Enter username to fling"
+FlingButton.Text = "Fling Player"
+StopFlingButton.Text = "Stop Fling"
+TPGunButton.Text = "TP to Gun"
+TPLobbyButton.Text = "TP to Lobby"
+TPMapButton.Text = "TP to Map"
+
+FlingButton.MouseButton1Click:Connect(function()
+    flingPlayer(FlingInput.Text)
+end)
+
+StopFlingButton.MouseButton1Click:Connect(stopFling)
+
+TPGunButton.MouseButton1Click:Connect(function()
+    local gun = workspace:FindFirstChild("GunDrop")
+    if gun then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = gun.CFrame
+    end
+end)
+
+TPLobbyButton.MouseButton1Click:Connect(function()
+    LocalPlayer.Character.HumanoidRootPart.CFrame = workspace.Lobby.CFrame
+end)
+
+TPMapButton.MouseButton1Click:Connect(function()
+    local map = workspace:FindFirstChild("Map")
+    if map then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = map:FindFirstChild("Spawn").CFrame
+    end
+end)
+
+-- Initialize ESP for all players
+for _, player in pairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        createESP(player)
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    if player ~= LocalPlayer then
+        createESP(player)
+    end
+end)
+
+-- Auto-shoot loop
+game:GetService("RunService").Heartbeat:Connect(function()
+    autoShootMurderer()
+end) 
