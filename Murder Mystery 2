@@ -69,35 +69,25 @@ local espEnabled = false
 local espItems = {}
 
 -- Update the item detection lists
-local weaponsList = {
-    "bazooka",
-    "grenade",
-    "molotov",
+local keysList = {
+    "key" -- This will catch both Regular and Special keys
+}
+
+local throwablesList = {
+    "rock",
+    "shovel",
+    "ball",
     "knife",
     "machete",
-    "shovel",
-    "hammer",
+    "grenade",
+    "molotov",
+    "paintbrush",
     "bowl",
-    "bomb",
-    "rocket",
-    "rocketlauncher",
-    "rock"
+    "cereal",
+    "bazooka"
 }
 
-local consumablesList = {
-    "potion",
-    "soda",
-    "medkit",
-    "stamina",
-    "shot"
-}
-
-local specialItemsList = {
-    "key",
-    "chest"
-}
-
--- Update ESP Function with color coding
+-- Remove old lists and update createESP function
 local function createESP(item)
     -- Check if ESP already exists for this item
     for _, esp in pairs(espItems) do
@@ -115,40 +105,31 @@ local function createESP(item)
     local itemType = "other"
     local color
     
-    -- Check weapon items (Red)
-    for _, weapon in pairs(weaponsList) do
-        if itemNameLower:find(weapon) then
-            color = Color3.fromRGB(255, 0, 0)
-            itemType = "Weapon"
-            break
+    -- Check keys (Yellow)
+    if itemNameLower:find("key") then
+        color = Color3.fromRGB(255, 255, 0) -- Bright Yellow
+        itemType = "Key"
+        if itemNameLower:find("special") then
+            itemType = "Special Key"
+        else
+            itemType = "Regular Key"
         end
     end
     
-    -- Check consumable items (Green)
+    -- Check throwables (Red)
     if not color then
-        for _, consumable in pairs(consumablesList) do
-            if itemNameLower:find(consumable) then
-                color = Color3.fromRGB(0, 255, 0)
-                itemType = "Consumable"
+        for _, throwable in pairs(throwablesList) do
+            if itemNameLower:find(throwable) then
+                color = Color3.fromRGB(255, 0, 0) -- Bright Red
+                itemType = "Throwable"
                 break
             end
         end
     end
     
-    -- Check special items (Yellow)
+    -- If not a recognized item, don't create ESP
     if not color then
-        for _, special in pairs(specialItemsList) do
-            if itemNameLower:find(special) then
-                color = Color3.fromRGB(255, 255, 0)
-                itemType = "Special"
-                break
-            end
-        end
-    end
-    
-    -- Default color (White)
-    if not color then
-        color = Color3.fromRGB(255, 255, 255)
+        return
     end
     
     highlight.FillColor = color
@@ -194,25 +175,18 @@ local function createESP(item)
     })
 end
 
--- Update item detection function
+-- Update shouldCreateESP function
 local function shouldCreateESP(item)
     local itemNameLower = item.Name:lower()
     
-    -- Check all item lists
-    for _, weapon in pairs(weaponsList) do
-        if itemNameLower:find(weapon) then
-            return true
-        end
+    -- Check for keys
+    if itemNameLower:find("key") then
+        return true
     end
     
-    for _, consumable in pairs(consumablesList) do
-        if itemNameLower:find(consumable) then
-            return true
-        end
-    end
-    
-    for _, special in pairs(specialItemsList) do
-        if itemNameLower:find(special) then
+    -- Check throwables
+    for _, throwable in pairs(throwablesList) do
+        if itemNameLower:find(throwable) then
             return true
         end
     end
