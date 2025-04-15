@@ -1,423 +1,613 @@
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local TweenService = game:GetService("TweenService")
+    game:GetService("VirtualUser"):ClickButton2(Vector2.new());
+end);
+--<>----<>----<>----<>----<>----<>----<>--
+local Library = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Drifter0507/Shamrock/main/MainLibrary", true))();
+--<>----<>----<>----<>----<>----<>----<>--
+pcall(function()
+    for i, v in pairs(getconnections(game:GetService("ScriptContext").Error)) do
+        v:Disable();
+    end;
+end);
+--<>----<>----<>----<>----<>----<>----<>--
 
--- Create GUI
-local ScreenGui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local UICorner = Instance.new("UICorner")
-local TopBar = Instance.new("Frame")
-local UICorner_2 = Instance.new("UICorner")
-local Title = Instance.new("TextLabel")
-local ContentFrame = Instance.new("Frame")
+--<>----<>----<>----<>----<>----<>----<>--
+local Workspace = game:GetService('Workspace');
+local ReplicatedStorage = game:GetService('ReplicatedStorage');
+local Players = game:GetService('Players');
+local Client = Players.LocalPlayer;
+local RunService = game:GetService('RunService');
+local Workspace = game:GetService("Workspace");
+local Lighting = game:GetService("Lighting");
+local UIS = game:GetService("UserInputService");
+local Teams = game:GetService("Teams");
+local ScriptContext = game:GetService("ScriptContext");
+local CoreGui = game:GetService("CoreGui");
+local Camera = Workspace.CurrentCamera;
+local Mouse = Client:GetMouse();
+local Terrain = Workspace.Terrain;
+local VirtualUser = game:GetService("VirtualUser");
+--<>----<>----<>----<>----<>----<>----<>--
+local Modules = ReplicatedStorage.Modules;
+local EmoteModule = Modules.EmoteModule;
+local Emotes = Client.PlayerGui.MainGUI.Game:FindFirstChild("Emotes");
+local EmoteList = {"headless","zombie","zen","ninja","floss","dab"};
+local CanGrab 
+CanGrab = false;
 
--- GUI Setup
-ScreenGui.Parent = game.CoreGui
-ScreenGui.ResetOnSpawn = false
+local Origins = {{2,0,0},{-2,0,0},{0,2,0},{0,-2,0},{0,0,1},{0,0,-1}};
 
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 200, 0, 120)
-MainFrame.Position = UDim2.new(0.8, 0, 0.3, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
+local GunHighlight = Instance.new("Highlight");
+local GunHandleAdornment = Instance.new("SphereHandleAdornment");
 
-UICorner.Parent = MainFrame
-UICorner.CornerRadius = UDim.new(0, 10)
+GunHighlight.FillColor = Color3.fromRGB(248, 241, 174);
+GunHighlight.Adornee = Workspace:FindFirstChild("GunDrop");
+GunHighlight.OutlineTransparency = 1;
+GunHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop;
+GunHighlight.RobloxLocked = true;
 
-TopBar.Name = "TopBar"
-TopBar.Size = UDim2.new(1, 0, 0, 40)
-TopBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-TopBar.BorderSizePixel = 0
-TopBar.Parent = MainFrame
+GunHandleAdornment.Color3 = Color3.fromRGB(248, 241, 174);
+GunHandleAdornment.Transparency = 0.2;
+GunHandleAdornment.Adornee = Workspace:FindFirstChild("GunDrop");
+GunHandleAdornment.AlwaysOnTop = true;
+GunHandleAdornment.AdornCullingMode = Enum.AdornCullingMode.Never;
+GunHandleAdornment.RobloxLocked = true;
 
-UICorner_2.Parent = TopBar
-UICorner_2.CornerRadius = UDim.new(0, 10)
+GunHighlight.Parent = CoreGui;
+GunHandleAdornment.Parent = CoreGui;
 
-Title.Name = "Title"
-Title.Size = UDim2.new(1, 0, 1, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "Grandma ESP"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
-Title.Parent = TopBar
+local TeleportDict = {
+    ["Lobby"] = Vector3.new(-121.12338256836, 138.27394104004, 38.946128845215),
+    ["Map"] = Vector3.new(-107.90824127197266, 138.34988403320312, -10.622464179992676),
+};
+local TeleportTable = {}
+for i, v in pairs(TeleportDict) do
+    table.insert(TeleportTable,i);
+end;
 
-ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -20, 1, -50)
-ContentFrame.Position = UDim2.new(0, 10, 0, 45)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.Parent = MainFrame
+local Murderer, Sheriff = nil, nil;
 
--- Create Toggle Button
-local ESPToggle = Instance.new("TextButton")
-ESPToggle.Size = UDim2.new(1, 0, 0, 35)
-ESPToggle.Position = UDim2.new(0, 0, 0, 0)
-ESPToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-ESPToggle.Text = "ESP: OFF"
-ESPToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-ESPToggle.Font = Enum.Font.GothamBold
-ESPToggle.TextSize = 14
-ESPToggle.Parent = ContentFrame
+function GetMurderer()
+    for i,v in pairs(Players:GetChildren()) do 
+        if v.Backpack:FindFirstChild("Knife") or v.Character:FindFirstChild("Knife") and v.Name == "Tool" then
+            return v.Name;
+        end;
+    end;
+    return nil;
+end;
 
-local UICorner_3 = Instance.new("UICorner")
-UICorner_3.CornerRadius = UDim.new(0, 6)
-UICorner_3.Parent = ESPToggle
+function GetSheriff()
+    for i,v in pairs(Players:GetChildren()) do 
+        if v.Backpack:FindFirstChild("Gun") or v.Character:FindFirstChild("Gun") and v.Name == "Tool" then
+            return v.Name;
+        end;
+        return nil;
+    end;
+end;
+--<>----<>----<>----<>----<>----<>----<>--
+local Character = nil;
+local RootPart = nil;
+local Humanoid = nil;
 
--- ESP Variables
-local espEnabled = false
-local espItems = {}
+getgenv().WS = 16
+getgenv().JP = 50
+function SetCharVars()
+	Character = Client.Character;
+	Humanoid = Character:FindFirstChild("Humanoid") or Character:WaitForChild("Humanoid");
+	RootPart = Character:FindFirstChild("HumanoidRootPart") or Character:WaitForChild("HumanoidRootPart");
+	if getgenv().Speed then
+		Humanoid.WalkSpeed = getgenv().WS;
+	end;
+	Humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+		if getgenv().Speed then
+			Humanoid.WalkSpeed = getgenv().WS;
+		end;
+	end);
+    if getgenv().Jump then
+		Humanoid.WalkSpeed = getgenv().JP;
+	end;
+	Humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+		if getgenv().Jump then
+			Humanoid.WalkSpeed = getgenv().JP;
+		end;
+	end);
+end;
+SetCharVars();
+Client.CharacterAdded:Connect(SetCharVars);
 
--- Update the item detection lists
-local keysList = {
-    "key" -- This will catch both Regular and Special keys
-}
+local Ws;
+Ws = hookmetamethod(game, "__index", function(self, Value)
+    if tostring(self) == "Humanoid" and tostring(Value) == "WalkSpeed" then
+        return 16;
+    end;
+    return Ws(self, Value);
+end);
 
-local throwablesList = {
-    "rock",
-    "shovel",
-    "ball",
-    "knife",
-    "machete",
-    "grenade",
-    "molotov",
-    "paintbrush",
-    "bowl",
-    "cereal",
-    "bazooka",
-    "shell",
-    "fish",
-    "rocket",
-    "rocketlauncher"
-}
+local Jp;
+Jp = hookmetamethod(game, "__index", function(self, Value)
+    if tostring(self) == "Humanoid" and tostring(Value) == "WalkSpeed" then
+        return 16;
+    end;
+    return Jp(self, Value);
+end);
 
--- Update the grandmaList to be more specific
-local grandmaList = {
-    "grandma",
-    "granny",
-    "grandmother"
-}
+--<>----<>----<>----<>----<>----<>----<>--
 
--- Add a list of parts to ignore
-local ignoredParts = {
-    "spawn",
-    "spawnpoint",
-    "spawnlocation",
-    "baseplate",
-    "terrain",
-    "part",
-    "block"
-}
+--<>----<>----<>----<>----<>----<>----<>--
+local Window = Library:CreateWindow({Title = "Murder Mystery 2"});
+local Tab1 = Window:CreateTab({Title = "Main", ScrollBar = false});
+local Tab2 = Window:CreateTab({Title = "Economy", ScrollBar = false});
+local Tab3 = Window:CreateTab({Title = "Roles", ScrollBar = false});
 
--- Update isGrandma function to be more accurate
-local function isGrandma(item)
-    -- Check if it's a character model
-    if not (item:IsA("Model") and item:FindFirstChild("Humanoid")) then
-        return false
+--<>----<>----<>----<>----<>----<>----<>--
+local ClientSection = Tab1:CreateSection({
+	Title = "Client"
+});
+--<>----<>----<>----<>----<>----<>----<>--
+local WorldSection = Tab1:CreateSection({
+	Title = "World"
+});
+--<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>--
+local AutofarmSection = Tab2:CreateSection({
+	Title = "Autofarm"
+});
+--<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>--
+local MurderSection = Tab3:CreateSection({
+	Title = "Murderer"
+});
+--<>----<>----<>----<>----<>----<>----<>--
+local SheriffSection = Tab3:CreateSection({
+	Title = "Sheriff"
+});
+--<>----<>----<>----<>----<>----<>----<>--
+
+--<>----<>----<>----<>----<>----<>----<>--
+ClientSection:CreateToggle({
+	Title = "CTRL click tp",
+	Default = false,
+	Callback = function(state)
+        getgenv().ClickTP = state;
+	end;
+});
+Mouse.Button1Down:connect(function()
+    if not game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftControl) then return end;
+    if not Mouse.Target then return end;
+    if not getgenv().ClickTP then return end;
+    Character:MoveTo(Mouse.Hit.p);
+end)
+--<>----<>----<>----<>----<>----<>----<>--
+
+ClientSection:CreateSlider({
+	Title = "WalkSpeed",
+	Min = 16,
+	Max = 200,
+	Default = 16,
+	Callback = function(val)
+		getgenv().WS = tonumber(val)--tonumber(val / 10) or 0;
+        Humanoid.WalkSpeed = val;
     end
-    
-    local itemNameLower = item.Name:lower()
-    for _, name in pairs(grandmaList) do
-        if itemNameLower:find(name) then
-            return true
-        end
+});
+--<>----<>----<>----<>----<>----<>----<>--
+ClientSection:CreateSlider({
+	Title = "JumpPower",
+	Min = 50,
+	Max = 200,
+	Default = 50,
+	Callback = function(val)
+		getgenv().JP = tonumber(val)--tonumber(val / 10) or 0;
+        Humanoid.JumpPower = val;
     end
-    return false
-end
+});
+--<>----<>----<>----<>----<>----<>----<>--
+local c;
+local h;
+local bv;
+local bav;
+local cam;
+local flying;
+local p = Client;
+local buttons = {W = false, S = false, A = false, D = false, Moving = false};
 
--- Update shouldCreateESP function to exclude spawn parts
-local function shouldCreateESP(item)
-    -- First check if it's a system/spawn part that should be ignored
-    local itemNameLower = item.Name:lower()
-    for _, ignoredPart in pairs(ignoredParts) do
-        if itemNameLower:find(ignoredPart) then
-            return false
-        end
-    end
-    
-    -- Check if it's Grandma
-    if isGrandma(item) then
-        return true
-    end
-    
-    -- Check if it's a player (but not local player)
-    if item:IsA("Model") and item:FindFirstChild("Humanoid") and Players:GetPlayerFromCharacter(item) and Players:GetPlayerFromCharacter(item) ~= LocalPlayer then
-        return true
-    end
-    
-    -- Check for keys
-    if itemNameLower:find("key") then
-        return true
-    end
-    
-    -- Check throwables
-    for _, throwable in pairs(throwablesList) do
-        if itemNameLower:find(throwable) then
-            return true
-        end
-    end
-    
-    return false
-end
+local StartFly = function ()
+    if not Client.Character or not Character.Head or flying then return end;
+    c = Character;
+    h = Humanoid;
+    h.PlatformStand = true;
+    cam = workspace:WaitForChild('Camera');
+    bv = Instance.new("BodyVelocity");
+    bav = Instance.new("BodyAngularVelocity");
+    bv.Velocity, bv.MaxForce, bv.P = Vector3.new(0, 0, 0), Vector3.new(10000, 10000, 10000), 1000;
+    bav.AngularVelocity, bav.MaxTorque, bav.P = Vector3.new(0, 0, 0), Vector3.new(10000, 10000, 10000), 1000;
+    bv.Parent = c.Head;
+    bav.Parent = c.Head;
+    flying = true;
+    h.Died:connect(function() flying = false end);
+end;
 
--- Update createESP function to make Grandma more visible
-local function createESP(item)
-    -- Check if ESP already exists for this item
-    for _, esp in pairs(espItems) do
-        if esp.item == item then
-            return
-        end
-    end
+local EndFly = function ()
+    if not p.Character or not flying then return end
+    h.PlatformStand = false;
+    bv:Destroy();
+    bav:Destroy();
+    flying = false;
+end;
 
-    local highlight = Instance.new("Highlight")
-    highlight.FillTransparency = 0.5
-    highlight.OutlineTransparency = 0
-    
-    -- Color coding based on item type
-    local itemNameLower = item.Name:lower()
-    local itemType = "other"
-    local color
-    
-    -- Check if it's Grandma (Bright Red)
-    if isGrandma(item) then
-        color = Color3.fromRGB(255, 0, 0) -- Bright Red
-        itemType = "⚠️ GRANDMA ⚠️"
-        highlight.FillTransparency = 0.2 -- More visible
-        highlight.OutlineTransparency = 0
-        highlight.FillColor = Color3.fromRGB(255, 0, 0)
-        highlight.OutlineColor = Color3.fromRGB(255, 100, 100)
-        -- Make Grandma's ESP more visible through walls
-        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    -- Check if it's a player (Blue)
-    elseif item:IsA("Model") and item:FindFirstChild("Humanoid") and Players:GetPlayerFromCharacter(item) and Players:GetPlayerFromCharacter(item) ~= LocalPlayer then
-        color = Color3.fromRGB(0, 150, 255) -- Light Blue
-        itemType = "Player"
-        highlight.FillTransparency = 0.5
-    -- Check keys (Yellow)
-    elseif itemNameLower:find("key") then
-        color = Color3.fromRGB(255, 255, 0) -- Bright Yellow
-        itemType = "Key"
-        if itemNameLower:find("special") then
-            itemType = "Special Key"
+game:GetService("UserInputService").InputBegan:connect(function (input, GPE) 
+    if GPE then return end;
+    for i, e in pairs(buttons) do
+        if i ~= "Moving" and input.KeyCode == Enum.KeyCode[i] then
+            buttons[i] = true;
+            buttons.Moving = true;
+        end;
+    end;
+end);
+
+game:GetService("UserInputService").InputEnded:connect(function (input, GPE) 
+    if GPE then return end;
+    local a = false;
+    for i, e in pairs(buttons) do
+        if i ~= "Moving" then
+            if input.KeyCode == Enum.KeyCode[i] then
+                buttons[i] = false;
+            end;
+            if buttons[i] then a = true end;
+        end;
+    end;
+    buttons.Moving = a;
+end);
+
+local setVec = function (vec)
+    return vec * ((getgenv().FlySpeed or 50) / vec.Magnitude);
+end;
+
+game:GetService("RunService").Heartbeat:connect(function (step) -- The actual fly function, called every frame
+    if flying and c and c.PrimaryPart then
+        local p = c.PrimaryPart.Position;
+        local cf = cam.CFrame;
+        local ax, ay, az = cf:toEulerAnglesXYZ();
+        c:SetPrimaryPartCFrame(CFrame.new(p.x, p.y, p.z) * CFrame.Angles(ax, ay, az));
+        if buttons.Moving then
+            local t = Vector3.new();
+            if buttons.W then t = t + (setVec(cf.lookVector)) end;
+            if buttons.S then t = t - (setVec(cf.lookVector)) end;
+            if buttons.A then t = t - (setVec(cf.rightVector)) end;
+            if buttons.D then t = t + (setVec(cf.rightVector)) end;
+            c:TranslateBy(t * step);
+        end;
+    end;
+end);
+
+ClientSection:CreateToggle({
+	Title = "Fly",
+	Default = false,
+	Callback = function(state)
+        getgenv().Flying = state;
+        if getgenv().Flying then
+            StartFly();
         else
-            itemType = "Regular Key"
-        end
-    -- Check throwables (Orange)
-    else
-        for _, throwable in pairs(throwablesList) do
-            if itemNameLower:find(throwable) then
-                color = Color3.fromRGB(255, 165, 0) -- Orange
-                itemType = "Throwable"
-                break
-            end
-        end
-    end
-    
-    -- If not a recognized item, don't create ESP
-    if not color then
-        return
-    end
-    
-    highlight.FillColor = color
-    highlight.OutlineColor = color
-    highlight.Parent = item
-    highlight.Enabled = espEnabled
-    
-    local billboardGui = Instance.new("BillboardGui")
-    billboardGui.Size = UDim2.new(0, 100, 0, 35)
-    billboardGui.AlwaysOnTop = true
-    billboardGui.StudsOffset = Vector3.new(0, 2, 0)
-    billboardGui.Parent = item
-    billboardGui.Enabled = espEnabled
-    
-    -- Make text bigger for Grandma and Players
-    local textSize = (isGrandma(item) or (item:FindFirstChild("Humanoid") and Players:GetPlayerFromCharacter(item))) and 14 or 12
-    
-    local itemLabel = Instance.new("TextLabel")
-    itemLabel.Size = UDim2.new(1, 0, 0.6, 0)
-    itemLabel.Position = UDim2.new(0, 0, 0, 0)
-    itemLabel.BackgroundTransparency = 1
-    itemLabel.Text = item.Name
-    itemLabel.TextColor3 = color
-    itemLabel.TextStrokeTransparency = 0
-    itemLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    itemLabel.Font = Enum.Font.GothamBold
-    itemLabel.TextSize = textSize
-    itemLabel.Parent = billboardGui
-    
-    local typeLabel = Instance.new("TextLabel")
-    typeLabel.Size = UDim2.new(1, 0, 0.4, 0)
-    typeLabel.Position = UDim2.new(0, 0, 0.6, 0)
-    typeLabel.BackgroundTransparency = 1
-    typeLabel.Text = itemType
-    typeLabel.TextColor3 = color
-    typeLabel.TextStrokeTransparency = 0
-    typeLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    typeLabel.Font = Enum.Font.GothamBold
-    typeLabel.TextSize = textSize - 2
-    typeLabel.Parent = billboardGui
-    
-    -- Add distance tracker for Grandma and Players
-    if isGrandma(item) or (item:FindFirstChild("Humanoid") and Players:GetPlayerFromCharacter(item)) then
-        local distanceLabel = Instance.new("TextLabel")
-        distanceLabel.Size = UDim2.new(1, 0, 0.4, 0)
-        distanceLabel.Position = UDim2.new(0, 0, 1, 0)
-        distanceLabel.BackgroundTransparency = 1
-        distanceLabel.TextColor3 = color
-        distanceLabel.TextStrokeTransparency = 0
-        distanceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        distanceLabel.Font = Enum.Font.GothamBold
-        distanceLabel.TextSize = textSize - 2
-        distanceLabel.Parent = billboardGui
-        
-        -- Update distance
-        game:GetService("RunService").RenderStepped:Connect(function()
-            if item and item:IsDescendantOf(workspace) and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local distance = (LocalPlayer.Character.HumanoidRootPart.Position - item:GetPivot().Position).Magnitude
-                distanceLabel.Text = string.format("Distance: %.1f", distance)
-            end
-        end)
-    end
-    
-    table.insert(espItems, {
-        item = item,
-        highlight = highlight,
-        billboard = billboardGui
-    })
-end
+            EndFly();
+        end;
+	end
+});
 
--- Add this function to handle character updates for Grandma
-local function handleCharacterUpdates(character)
-    if isGrandma(character) then
-        -- Remove any existing ESP
-        for i, esp in pairs(espItems) do
-            if esp.item == character then
-                if esp.highlight then esp.highlight:Destroy() end
-                if esp.billboard then esp.billboard:Destroy() end
-                table.remove(espItems, i)
-                break
-            end
-        end
-        -- Create new ESP
-        createESP(character)
+ClientSection:CreateSlider({
+	Title = "Fly speed",
+	Min = 20,
+	Max = 150,
+	Default = 50,
+	Callback = function(val)
+        getgenv().FlySpeed = tonumber(val) or 50;
     end
-end
-
--- Update workspace.DescendantAdded connection
-workspace.DescendantAdded:Connect(function(item)
-    if item:IsA("Model") then
-        -- Wait for Humanoid to be added for characters
-        if item:WaitForChild("Humanoid", 2) then
-            wait(0.1) -- Small delay to ensure the character is fully loaded
-            handleCharacterUpdates(item)
+});
+--<>----<>----<>----<>----<>----<>----<>--
+ClientSection:CreateButton({
+    Title = "Btools",
+    Callback = function()
+        if not Client.Backpack:FindFirstChildOfClass("HopperBun") then
+            local tool1 = Instance.new("HopperBin",Client.Backpack);
+            local tool2 = Instance.new("HopperBin",Client.Backpack);
+            local tool3 = Instance.new("HopperBin",Client.Backpack);
+            local tool4 = Instance.new("HopperBin",Client.Backpack);
+            local tool5 = Instance.new("HopperBin",Client.Backpack);
+            tool1.BinType = "Clone";
+            tool2.BinType = "GameTool";
+            tool3.BinType = "Hammer";
+            tool4.BinType = "Script";
+            tool5.BinType = "Grab";
         end
-    elseif shouldCreateESP(item) then
+    end
+})
+--<>----<>----<>----<>----<>----<>----<>--
+local accessories = {}
+function GodMode()
+    if game.Players.LocalPlayer.Character then
+        if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+            for _, accessory in pairs(game.Players.LocalPlayer.Character.Humanoid:GetAccessories()) do
+                table.insert(accessories, accessory:Clone())
+            end
+            game.Players.LocalPlayer.Character.Humanoid.Name = "boop"
+        end
+        local v = game.Players.LocalPlayer.Character["boop"]:Clone()
+        v.Parent = game.Players.LocalPlayer.Character
+        v.Name = "Humanoid"
         wait(0.1)
-        createESP(item)
-    end
-end)
-
--- Initialize ESP with improved character detection
-local function initializeESP()
-    for _, item in pairs(workspace:GetDescendants()) do
-        if item:IsA("Model") and item:FindFirstChild("Humanoid") then
-            handleCharacterUpdates(item)
-        elseif shouldCreateESP(item) then
-            createESP(item)
+        game.Players.LocalPlayer.Character["boop"]:Destroy()
+        workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
+        for _, accessory in pairs(accessories) do
+            game.Players.LocalPlayer.Character.Humanoid:AddAccessory(accessory)
         end
+        game.Players.LocalPlayer.Character.Animate.Disabled = true
+        wait(0.1)
+        game.Players.LocalPlayer.Character.Animate.Disabled = false
     end
 end
 
--- Toggle ESP Function
-local function toggleESP()
-    espEnabled = not espEnabled
-    ESPToggle.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
-    ESPToggle.BackgroundColor3 = espEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(45, 45, 45)
-    
-    for _, esp in pairs(espItems) do
-        if esp.highlight and esp.billboard then
-            esp.highlight.Enabled = espEnabled
-            esp.billboard.Enabled = espEnabled
-        end
+
+ClientSection:CreateButton({
+    Title = "Godmode",
+    Callback = function()
+        GodMode()
     end
-end
+})
 
-ESPToggle.MouseButton1Click:Connect(toggleESP)
+ClientSection:CreateButton({
+	Title = "Force respawn",
+	Callback = function(state)
+		Character.Head:Remove();
+		Humanoid.BreakJointsOnDeath = false;
+		Humanoid.Health = 0;
+	end;
+});
+--<>----<>----<>----<>----<>----<>----<>--
+ClientSection:CreateButton({
+    Title = "Get all emotes",
+    Callback = function()
+		require(EmoteModule).GeneratePage(EmoteList,Emotes,'Free Emotes');
+    end
+})
+--<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>--
 
--- Make GUI draggable
-local dragging
-local dragInput
-local dragStart
-local startPos
+local folder = Instance.new("Folder",CoreGui);
+folder.Name = "ESP Holder";
+	
+local function AddBillboard(player)
+    local billboard = Instance.new("BillboardGui",folder);
+    billboard.Name = player.Name;
+    billboard.AlwaysOnTop = true;
+    billboard.Size = UDim2.fromOffset(200,50);
+    billboard.ExtentsOffset = Vector3.new(0,3,0);
+    billboard.Enabled = false
 
-local function updateDrag(input)
-    local delta = input.Position - dragStart
-    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
+    local textLabel = Instance.new("TextLabel",billboard);
+    textLabel.TextSize = 20;
+    textLabel.Text = player.Name;
+    textLabel.Font = Enum.Font.SourceSans;
+    textLabel.BackgroundTransparency = 1;
+    textLabel.Size = UDim2.fromScale(1,1);
 
-TopBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
+    if getgenv().AllEsp then
+        billboard.Enabled = true
+    end
+    repeat
+        wait()
+        pcall(function()
+            billboard.Adornee = player.Character.Head;
+            if player.Character:FindFirstChild("Knife") or player.Backpack:FindFirstChild("Knife") then
+                textLabel.TextColor3 = Color3.new(1,0,0);
+                if not billboard.Enabled and getgenv().MurderEsp then
+                    billboard.Enabled = true
+                end
+            elseif player.Character:FindFirstChild("Gun") or player.Backpack:FindFirstChild("Gun") then
+                textLabel.TextColor3 = Color3.new(0,0,1);
+                if not billboard.Enabled and getgenv().SheriffEsp then
+                    billboard.Enabled = true
+                end
+            else
+                textLabel.TextColor3 = Color3.new(0,1,0);
+            end;
+        end);
+    until not player.Parent;
+end;
+
+for _,player in pairs(Players:GetPlayers()) do
+    if player ~= Client then
+        coroutine.wrap(AddBillboard)(player);
+    end;
+end;
+Players.PlayerAdded:Connect(AddBillboard);
+
+Players.PlayerRemoving:Connect(function(player)
+    folder[player.Name]:Destroy();
+end);
+
+
+WorldSection:CreateToggle({
+	Title = "Player ESP",
+	Default = false,
+	Callback = function(state)
+        getgenv().AllEsp = state;
+        for i, v in pairs(folder:GetChildren()) do
+            if v:IsA("BillboardGui") and Players[tostring(v.Name)] then
+                if getgenv().AllEsp then
+                    v.Enabled = true;
+                else
+                    v.Enabled = false;
+                end;
+            end;
+        end;
+	end
+});
+
+WorldSection:CreateToggle({
+	Title = "Murderer ESP",
+	Default = false,
+	Callback = function(state)
+        getgenv().MurderEsp = state;
+        while getgenv().MurderEsp do
+            wait()
+            pcall(function()
+                for i, v in pairs(folder:GetChildren()) do
+                    if v:IsA("BillboardGui") and Players[tostring(v.Name)] then
+                        if Players[tostring(v.Name)].Character:FindFirstChild("Knife") or Players[tostring(v.Name)].Backpack:FindFirstChild("Knife")  then
+                            if getgenv().MurderEsp then
+                                v.Enabled = true;
+                            else
+                                v.Enabled = false;
+                            end;
+                        end
+                    end;
+                end;
+            end);
+        end;
+	end
+});
+
+WorldSection:CreateToggle({
+	Title = "Sheriff ESP",
+	Default = false,
+	Callback = function(state)
+        getgenv().SheriffEsp = state;
+        while getgenv().SheriffEsp do
+            wait()
+            pcall(function()
+                for i, v in pairs(folder:GetChildren()) do
+                    if v:IsA("BillboardGui") and Players[tostring(v.Name)] then
+                        if Players[tostring(v.Name)].Character:FindFirstChild("Gun") or Players[tostring(v.Name)].Backpack:FindFirstChild("Gun")  then
+                            if getgenv().SheriffEsp then
+                                v.Enabled = true;
+                            else
+                                v.Enabled = false;
+                            end;
+                        end
+                    end;
+                end;
+            end);
+        end;
+	end
+});
+--<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>--
+SheriffSection:CreateToggle({
+	Title = "Gun ESP",
+	Default = false,
+    Order = 50,
+	Callback = function(state)
+        getgenv().GunESP = state;
+	end
+});
+
+coroutine.wrap(function()
+    RunService.RenderStepped:Connect(function()
+        pcall(function()
+            if getgenv().GunESP then
+                local gundrop = Workspace:FindFirstChild("GunDrop");
+                GunHighlight.Adornee = gundrop;
+                GunHandleAdornment.Adornee = gundrop;
+                if gundrop then 
+                    GunHandleAdornment.Size = gundrop.Size + Vector3.new(0.05, 0.05, 0.05) ;
+                end;
         
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
+                GunHighlight.Enabled = getgenv().GunESP;
+                GunHandleAdornment.Visible = getgenv().GunESP;
+            end;
+        end);
+    end);
+end)();
+--<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>--
+
+function XrayOn(obj)
+    for _,v in pairs(obj:GetChildren()) do
+        if (v:IsA("BasePart")) and not v.Parent:FindFirstChild("Humanoid") then
+            v.LocalTransparencyModifier = 0.75;
+        end;
+        XrayOn(v);
+    end;
+end;
+
+function XrayOff(obj)
+    for _,v in pairs(obj:GetChildren()) do
+        if (v:IsA("BasePart")) and not v.Parent:FindFirstChild("Humanoid") then
+            v.LocalTransparencyModifier = 0;
+        end ;
+        XrayOff(v);
+    end;
+end;
+
+WorldSection:CreateToggle({
+	Title = "Xray",
+	Default = false,
+	Callback = function(state)
+        getgenv().Xray = state;
+        if getgenv().Xray then
+            XrayOn(Workspace);
+        else
+            XrayOff(Workspace);
+        end;
+	end
+});
+--<>----<>----<>----<>----<>----<>----<>--
+WorldSection:CreateButton({
+    Title = "Unlock workspace",
+    Callback = function()
+        function unlock(obj)
+			for i,v in pairs(obj:GetChildren()) do
+				if v:IsA("BasePart") then
+					v.Locked = false;
+				end;
+				unlock(v);
+			end;
+		end;
+		unlock(workspace);
     end
-end)
-
-TopBar.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        updateDrag(input)
-    end
-end)
-
--- Add close button
-local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 30, 0, 30)
-CloseButton.Position = UDim2.new(1, -35, 0, 5)
-CloseButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.TextSize = 14
-CloseButton.Parent = TopBar
-
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 6)
-CloseCorner.Parent = CloseButton
-
-CloseButton.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
--- Add player ESP when they join
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function(character)
-        wait(0.5) -- Wait for character to load
-        createESP(character)
-    end)
-end)
-
--- Initialize ESP for existing players
-for _, player in pairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer and player.Character then
-        createESP(player.Character)
-    end
-    player.CharacterAdded:Connect(function(character)
-        wait(0.5) -- Wait for character to load
-        createESP(character)
-    end)
-end
-
--- Initialize ESP
-initializeESP() 
+})
+--<>----<>----<>----<>----<>----<>----<>--
+WorldSection:CreateDropdown({
+	Text = "Teleports",
+	Array = TeleportTable,
+	Callback = function(val)
+        if val == "Map" then
+            for _,child in pairs(Workspace:GetDescendants()) do
+                if child:IsA("BasePart") and child.Name == "Coin_Server" then
+                    RootPart.CFrame = CFrame.new(child.Parent.Parent.Map:FindFirstChild("Part").Position);
+                end;
+            end;
+        else
+            pcall(function()
+                RootPart.CFrame = CFrame.new(TeleportDict[val]);
+            end)
+        end;
+	end
+})
+--<>----<>----<>----<>----<>----<>----<>--
+AutofarmSection:CreateToggle({
+	Title = "Autofarm",
+	Default = false,
+	Callback = function(state)
+        getgenv().Autofarm = state;
+        if not getgenv().AutofarmMethod then return end;
+        if getgenv().AutofarmMethod == "Coins" then
+            while getgenv().Autofarm do
+                task.wait();
+                local CoinContainer = Workspace:FindFirstChild("CoinContainer", true);
+                if CoinContainer and Client.PlayerGui.MainGUI.Game.CashBag.Visible == true then
+                    local coin = CoinContainer:FindFirstChild("Coin_Server");
+                    if coin then
+                        repeat
+                            RootPart.CFrame = CFrame.new(coin.Position - Vector3.new(0, 2.5, 0)) * CFrame.Angles(0, 0, math.rad(180));
+                            RunService.Stepped:Wait();
+                            if not getgenv().Autofarm then break end;
+                        until not coin:IsDescendantOf(Workspace) or coin.Name ~= "Coin_Server";
+                        task.wait(1.8);
+                    end;
+                else
+                    task.wait(1.5);
+                end;
+            end;
+        else
+            while getgenv().Autofarm do
+                wait();
+                if Client.PlayerGui.MainGUI.Game.CashBag.Vis
